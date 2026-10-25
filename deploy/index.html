@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Летопись</title>
+<style>
+  :root { --bg: #f7f3ec; --fg: #2b2620; --muted: #7a6f62; --accent: #8a5a2b; --card: #fffdf9; --line: #e6dccd; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1915; --fg: #eee6da; --muted: #a39887; --accent: #d9a46a; --card: #25211c; --line: #3a332b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; font-size: 40px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .btn { display: block; text-align: center; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 19px; padding: 16px; border-radius: 10px; }
+  @media (prefers-color-scheme: dark) { .btn { color: #1c1915; } }
+  .meta { color: var(--muted); font-size: 14px; margin: 14px 0 0; }
+  .meta code { font-size: 12px; word-break: break-all; }
+  h2 { font-size: 18px; margin: 32px 0 8px; }
+  ol { padding-left: 22px; margin: 0; }
+  li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Летопись</h1>
+  <p class="sub">Личный дневник: Markdown, шифрование, «В этот день».</p>
+
+  <div class="card">
+    <a class="btn" href="letopis.apk" download>Скачать для Android</a>
+    <p class="meta">Версия {{VERSION}} · {{SIZE}} МБ · собрано {{DATE}}<br>SHA-256: <code>{{SHA256}}</code></p>
+  </div>
+
+  <h2>Как установить</h2>
+  <ol>
+    <li>Открыть эту страницу на телефоне и нажать «Скачать».</li>
+    <li>Открыть скачанный <b>letopis.apk</b> и разрешить установку из этого источника.</li>
+    <li>Новая версия ставится поверх старой, записи сохраняются.</li>
+  </ol>
+  <p class="meta">Пароль от дневника не восстанавливается — запишите его.</p>
+</main>
+</body>
+</html>
