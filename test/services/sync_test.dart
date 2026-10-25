@@ -1,6 +1,5 @@
 // ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +9,9 @@ import 'package:letopis/core/crypto.dart';
 import 'package:letopis/core/entry.dart';
 import 'package:letopis/core/store.dart';
 import 'package:letopis/core/vault.dart';
+import 'package:archive/archive_io.dart';
 import 'package:letopis/services/ai_tagger.dart';
+import 'package:letopis/services/exporter.dart';
 import 'package:letopis/services/git_remote.dart';
 import 'package:letopis/services/sync.dart';
 
@@ -196,6 +197,38 @@ void main() {
     expect(remote.files.keys, contains('diary/media/${att.id}.txt'));
   });
 
+  test('export ZIP holds readable Markdown and the media', () async {
+    final (a, _) = await twoDevices();
+    final src = File('${a.dir.path}/v.txt')..writeAsStringSync('видео');
+    final att = await a.store.importMedia(src, name: 'v.txt');
+    await a.store.save(
+      Entry.create(at: DateTime(2026, 1, 2, 3, 4))
+        ..title = 'Тест'
+        ..attachments.add(att),
+    );
+    final zip = await exportZip(a.store, Directory('${a.dir.path}/out'));
+    final archive = ZipDecoder().decodeBytes(zip.readAsBytesSync());
+    final names = archive.files.map((f) => f.name).toSet();
+    expect(names, {'entries/2026/01/2026-01-02-0304-тест.md', 'media/${att.id}.txt'});
+    expect(utf8.decode(archive.findFile('media/${att.id}.txt')!.content), 'видео');
+    expect(Directory('${a.dir.path}/out').listSync().length, 1); // temp files removed
+  });
+
+  test('plain paths: same minute and title never collide', () {
+    final t = DateTime(2025, 5, 3, 12);
+    final a = Entry.create(at: t)..body = 'одно';
+    final b = Entry.create(at: t)..body = 'одно';
+    final paths = SyncEngine.plainEntryPaths([a, b]);
+    expect(paths.values.toSet().length, 2);
+    expect(paths.values, contains('entries/2025/05/2025-05-03-1200-одно-2.md'));
+  });
+
+  test('streamed file sha equals in-memory sha', () async {
+    final dir = await Directory.systemTemp.createTemp('sha');
+    final f = File('${dir.path}/x')..writeAsBytesSync(List.generate(300000, (i) => i % 256));
+    expect(await gitBlobShaFile(f), gitBlobSha(f.readAsBytesSync()));
+  });
+
   group('GitHubRepo over HTTP', () {
     test('snapshot and commit call the Git Data API in order', () async {
       final calls = <String>[];
@@ -248,7 +281,7 @@ void main() {
       final head = await repo.commit(
         snap,
         put: {
-          'd/b.enc': Uint8List.fromList([1]),
+          'd/b.enc': bytesSource([1]),
         },
         remove: {'d/a.enc'},
         message: 'm',

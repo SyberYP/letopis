@@ -279,6 +279,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     final s = store;
     if (s == null) return;
+    try {
+      await s.flushIndex();
+    } catch (_) {
+      // the index is only a cache
+    }
     store = null;
     s.clearTemp();
     s.box.wipe();

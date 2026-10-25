@@ -134,6 +134,45 @@ void main() {
       expect(s2.count, 1);
     });
 
+    test('index: unlock reads the cache, picks up files changed behind its back', () async {
+      final s = EntryStore(dir, box);
+      final a = Entry.create()..body = 'a';
+      final b = Entry.create()..body = 'b #тег';
+      await s.save(a);
+      await s.save(b);
+      await s.flushIndex();
+      expect(File('${dir.path}/index.enc').existsSync(), isTrue);
+
+      // Another store (like sync) rewrites b's file; a third entry appears; the index is stale.
+      final other = EntryStore(dir, box);
+      await other.load();
+      await Future.delayed(const Duration(milliseconds: 20));
+      final b2 = other.byId(b.id)!..body = 'b changed';
+      await File('${dir.path}/${EntryStore.entryPath(b.id)}')
+          .writeAsBytes(await box.encrypt(utf8.encode(entryToMarkdown(b2)), context: 'entries/${b.id}'));
+      final c = Entry.create()..body = 'c';
+      await File('${dir.path}/${EntryStore.entryPath(c.id)}')
+          .writeAsBytes(await box.encrypt(utf8.encode(entryToMarkdown(c)), context: 'entries/${c.id}'));
+      await File('${dir.path}/${EntryStore.entryPath(a.id)}').delete();
+
+      final s3 = EntryStore(dir, box);
+      await s3.load();
+      expect(s3.entries.map((e) => e.body).toSet(), {'b changed', 'c'});
+      expect(s3.byId(b.id)!.allTags, isEmpty);
+    });
+
+    test('entry json round trip', () {
+      final e = Entry.create()
+        ..title = 't'
+        ..body = 'b'
+        ..tags = ['x']
+        ..mood = 3
+        ..attachments = [const Attachment(id: 'i', type: AttachmentType.audio, name: 'n.m4a', mime: 'audio/mp4')];
+      final back = Entry.fromJson(e.toJson());
+      expect(back.sameContent(e), isTrue);
+      expect(back.updated.isAtSameMomentAs(e.updated), isTrue);
+    });
+
     test('json settings', () async {
       final s = EntryStore(dir, box);
       await s.writeJson('settings', {'a': 1});

@@ -103,10 +103,45 @@ class Entry {
   List<String> get allTags {
     final seen = <String>{};
     return [
-      for (final t in [...tags, ...extractHashtags(body)])
+      for (final t in [...tags, ...bodyTags])
         if (seen.add(t)) t,
     ];
   }
+
+  String? _tagsOf;
+  List<String> _bodyTags = const [];
+
+  /// Hashtags in the body; cached because lists and filters ask for them on every build.
+  List<String> get bodyTags {
+    if (!identical(_tagsOf, body)) {
+      _bodyTags = extractHashtags(body);
+      _tagsOf = body;
+    }
+    return _bodyTags;
+  }
+
+  /// Compact form for the on-device index (not the file format: that is Markdown).
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'c': created.microsecondsSinceEpoch,
+    'u': updated.microsecondsSinceEpoch,
+    if (title.isNotEmpty) 't': title,
+    'b': body,
+    if (tags.isNotEmpty) 'g': tags,
+    if (attachments.isNotEmpty) 'a': [for (final a in attachments) a.toJson()],
+    'm': ?mood,
+  };
+
+  factory Entry.fromJson(Map j) => Entry(
+    id: j['id'] as String,
+    created: DateTime.fromMicrosecondsSinceEpoch(j['c'] as int),
+    updated: DateTime.fromMicrosecondsSinceEpoch(j['u'] as int),
+    title: (j['t'] as String?) ?? '',
+    body: (j['b'] as String?) ?? '',
+    tags: [for (final t in (j['g'] as List?) ?? const []) '$t'],
+    attachments: [for (final a in (j['a'] as List?) ?? const []) Attachment.fromJson(a as Map)],
+    mood: j['m'] as int?,
+  );
 
   bool get isEmpty => title.trim().isEmpty && body.trim().isEmpty && attachments.isEmpty;
 

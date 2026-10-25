@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -63,20 +64,48 @@ class EntryStore {
   Map<String, DateTime> get tombstones => Map.unmodifiable(_tombstones);
   int get count => _entries.length;
 
+  /// On-device index (`index.enc`, never synced): every entry with the size and mtime of its
+  /// file, so unlock decrypts one file instead of thousands. Files that changed since (sync,
+  /// another app version) are decrypted individually and the index is refreshed.
+  Map<String, Map<String, dynamic>> _index = {};
+  Timer? _indexTimer;
+  bool _indexDirty = false;
+
   Future<void> load() async {
     _entries.clear();
+    final cached = ((await readJson('index'))?['files'] as Map?) ?? const {};
+    final fresh = <String, Map<String, dynamic>>{};
+    var dirty = false;
     final dir = Directory('${root.path}/entries');
     if (await dir.exists()) {
       final files = await dir.list().where((f) => f.path.endsWith('.md.enc')).cast<File>().toList();
-      // Decrypt in small batches: fast enough for thousands of entries, bounded memory.
       for (var i = 0; i < files.length; i += 32) {
         final batch = files.skip(i).take(32);
-        final loaded = await Future.wait(batch.map(_readEntryFile));
-        for (final e in loaded) {
-          if (e != null) _entries[e.id] = e;
+        final loaded = await Future.wait(
+          batch.map((f) async {
+            final id = f.uri.pathSegments.last.replaceAll('.md.enc', '');
+            final stat = await f.stat();
+            final c = cached[id];
+            if (c is Map && c['m'] == stat.modified.millisecondsSinceEpoch && c['s'] == stat.size) {
+              try {
+                return (Entry.fromJson(c['e'] as Map), stat, false);
+              } catch (_) {
+                // fall through to the file
+              }
+            }
+            return (await _readEntryFile(f), stat, true);
+          }),
+        );
+        for (final (e, stat, changed) in loaded) {
+          if (e == null) continue;
+          _entries[e.id] = e;
+          fresh[e.id] = _indexItem(e, stat);
+          dirty |= changed;
         }
       }
     }
+    _index = fresh;
+    if (dirty || cached.length != fresh.length) await flushIndex(force: true);
     _tombstones.clear();
     final t = await readJson('tombstones');
     t?.forEach((k, v) {
@@ -95,15 +124,45 @@ class EntryStore {
     }
   }
 
+  static Map<String, dynamic> _indexItem(Entry e, FileStat stat) => {
+    'm': stat.modified.millisecondsSinceEpoch,
+    's': stat.size,
+    'e': e.toJson(),
+  };
+
+  Future<void> _indexChanged(String id) async {
+    final e = _entries[id];
+    if (e == null) {
+      _index.remove(id);
+    } else {
+      _index[id] = _indexItem(e, await file(entryPath(id)).stat());
+    }
+    _indexDirty = true;
+    _indexTimer?.cancel();
+    _indexTimer = Timer(const Duration(seconds: 3), () => flushIndex().catchError((_) {}));
+  }
+
+  /// Writes the index if it changed; called on a timer and before lock.
+  Future<void> flushIndex({bool force = false}) async {
+    _indexTimer?.cancel();
+    if (!force && !_indexDirty) return;
+    _indexDirty = false;
+    await writeJson('index', {'v': 1, 'files': _index});
+  }
+
   /// Re-reads one entry from disk (after sync replaced the file).
   Future<Entry?> reload(String id) async {
     final f = file(entryPath(id));
     if (!await f.exists()) {
       _entries.remove(id);
+      await _indexChanged(id);
       return null;
     }
     final e = await _readEntryFile(f);
-    if (e != null) _entries[id] = e;
+    if (e != null) {
+      _entries[id] = e;
+      await _indexChanged(id);
+    }
     return e;
   }
 
@@ -112,12 +171,14 @@ class EntryStore {
     final clear = utf8.encode(entryToMarkdown(e));
     await _writeEncrypted(entryPath(e.id), clear);
     _entries[e.id] = e.copy();
+    await _indexChanged(e.id);
   }
 
   /// Deletes the entry, its media, and remembers a tombstone so sync deletes it elsewhere.
   Future<void> delete(String id) async {
     final e = _entries.remove(id);
     await _deleteIfExists(entryPath(id));
+    await _indexChanged(id);
     for (final a in e?.attachments ?? const <Attachment>[]) {
       await deleteMedia(a.id);
     }

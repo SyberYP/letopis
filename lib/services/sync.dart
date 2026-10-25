@@ -124,7 +124,7 @@ class SyncEngine {
     }
 
     final local = await _localHashes(state);
-    final put = <String, Uint8List>{};
+    final put = <String, BlobSource>{};
     final remove = <String>{};
     final paths = {
       ...local.keys,
@@ -149,7 +149,7 @@ class SyncEngine {
           remove.add(path);
           report.deletedRemote++;
         } else {
-          put[path] = await store.file(path).readAsBytes();
+          put[path] = _fileSource(path);
           report.uploaded++;
         }
       } else if (!localChanged && remoteChanged) {
@@ -163,11 +163,13 @@ class SyncEngine {
     if (put.isNotEmpty || remove.isNotEmpty) {
       final full = {for (final e in put.entries) '$_prefix${e.key}': e.value};
       if (!snap.files.containsKey('${_prefix}README.md')) {
-        full['${_prefix}README.md'] = Uint8List.fromList(utf8.encode(_readme));
+        full['${_prefix}README.md'] = bytesSource(utf8.encode(_readme));
       }
       await remote.commit(snap, put: full, remove: {for (final p in remove) '$_prefix$p'}, message: _message(report));
-      for (final e in put.entries) {
-        state.base[e.key] = gitBlobSha(e.value);
+      // The base is what was actually uploaded, even if the file changed again meanwhile.
+      for (final path in put.keys) {
+        final sha = _uploaded[path];
+        if (sha != null) state.base[path] = sha;
       }
       remove.forEach(state.base.remove);
     }
@@ -217,7 +219,7 @@ class SyncEngine {
     String path,
     String? l,
     String? r,
-    Map<String, Uint8List> put,
+    Map<String, BlobSource> put,
     SyncReport report,
   ) async {
     final id = _entryId(path);
@@ -226,14 +228,14 @@ class SyncEngine {
       if (l == null) {
         await _takeRemote(path, r, report);
       } else {
-        put[path] = await store.file(path).readAsBytes();
+        put[path] = _fileSource(path);
         report.uploaded++;
       }
       return;
     }
     if (id == null) {
       // Media and thumbnails never change after creation; vault: keep this device's.
-      put[path] = await store.file(path).readAsBytes();
+      put[path] = _fileSource(path);
       report.uploaded++;
       return;
     }
@@ -261,7 +263,7 @@ class SyncEngine {
       await store.reload(id);
       report.downloaded++;
     } else {
-      put[path] = await store.file(path).readAsBytes();
+      put[path] = _fileSource(path);
       report.uploaded++;
     }
     // Nothing is lost: the other version becomes its own entry.
@@ -278,12 +280,22 @@ class SyncEngine {
     );
     await store.save(conflict, touch: false);
     final cp = EntryStore.entryPath(conflict.id);
-    put[cp] = await store.file(cp).readAsBytes();
+    put[cp] = _fileSource(cp);
     report.uploaded++;
     report.changedEntries
       ..add(id)
       ..add(conflict.id);
   }
+
+  /// Blob ids of uploaded files, recorded when their bytes are read for the upload.
+  final Map<String, String> _uploaded = {};
+
+  BlobSource _fileSource(String path) => () async {
+    final f = path == 'vault.json' ? File('${store.root.path}/vault.json') : store.file(path);
+    final bytes = await f.readAsBytes();
+    _uploaded[path] = gitBlobSha(bytes);
+    return bytes;
+  };
 
   static String? _entryId(String path) {
     final m = RegExp(r'^entries/([^/]+)\.md\.enc$').firstMatch(path);
@@ -303,7 +315,7 @@ class SyncEngine {
       if (cached != null && cached[0] == stat.size && cached[1] == mtime) {
         out[p] = cached[2] as String;
       } else {
-        final sha = gitBlobSha(await f.readAsBytes());
+        final sha = await gitBlobShaFile(f);
         state.hashes[p] = [stat.size, mtime, sha];
         out[p] = sha;
       }
@@ -324,10 +336,23 @@ class SyncEngine {
 
   // ---- plain Markdown mirror ---------------------------------------------------------------
 
-  /// Path of an entry in the plain mirror: `entries/2026/10/2026-10-25-0941-утро.md`.
-  static String plainEntryPath(Entry e) {
-    final t = e.created.toLocal();
-    return 'entries/${t.year}/${t.month.toString().padLeft(2, '0')}/${entrySlug(e)}.md';
+  /// Paths of entries in the plain mirror: `entries/2026/10/2026-10-25-0941-утро.md`. Entries that
+  /// would share a path (same minute and title) get `-2`, `-3`… in creation order, so none is lost.
+  static Map<String, String> plainEntryPaths(Iterable<Entry> entries) {
+    final sorted = entries.toList()
+      ..sort((a, b) => a.created != b.created ? a.created.compareTo(b.created) : a.id.compareTo(b.id));
+    final used = <String>{};
+    final out = <String, String>{};
+    for (final e in sorted) {
+      final t = e.created.toLocal();
+      final base = 'entries/${t.year}/${t.month.toString().padLeft(2, '0')}/${entrySlug(e)}';
+      var path = '$base.md';
+      for (var n = 2; !used.add(path); n++) {
+        path = '$base-$n.md';
+      }
+      out[e.id] = path;
+    }
+    return out;
   }
 
   static String plainMediaPath(Attachment a) => 'media/${a.id}.${a.extension}';
@@ -346,40 +371,48 @@ class SyncEngine {
     final report = SyncReport();
     final state = await _loadState();
     final snap = await remote.snapshot();
-    final want = <String, Uint8List>{};
-    final mediaSha = <String, String>{}; // from cache: media never changes
+    final texts = <String, Uint8List>{};
+    final media = <String, BlobSource>{};
+    final keep = <String>{};
+    final paths = plainEntryPaths(store.entries);
     for (final e in store.entries) {
       final atts = {for (final a in e.attachments) a.id: a};
-      want[plainEntryPath(e)] = Uint8List.fromList(utf8.encode(plainMarkdown(e, atts)));
+      texts[paths[e.id]!] = Uint8List.fromList(utf8.encode(plainMarkdown(e, atts)));
       for (final a in e.attachments) {
         final p = plainMediaPath(a);
+        keep.add(p);
+        // Media never changes: once uploaded (and still there), it is not decrypted again.
         final known = state.hashes['plain:$p'];
-        if (known != null && snap.files['$_prefix$p'] == known[2]) {
-          mediaSha[p] = known[2] as String;
-        } else if (store.hasMedia(a.id)) {
-          final bytes = await store.mediaBytes(a.id);
-          if (bytes.length > GitHubRepo.maxBlobBytes) {
-            report.skipped.add(a.name);
-            continue;
-          }
-          want[p] = bytes;
-          state.hashes['plain:$p'] = [bytes.length, 0, gitBlobSha(bytes)];
+        if (known != null && snap.files['$_prefix$p'] == known[2]) continue;
+        if (!store.hasMedia(a.id)) continue;
+        if (a.size > GitHubRepo.maxBlobBytes) {
+          report.skipped.add(a.name);
+          continue;
         }
+        media[p] = () async {
+          final bytes = await store.mediaBytes(a.id);
+          state.hashes['plain:$p'] = [bytes.length, 0, gitBlobSha(bytes)];
+          return bytes;
+        };
       }
     }
-    final put = <String, Uint8List>{};
-    for (final e in want.entries) {
+    final put = <String, BlobSource>{};
+    for (final e in texts.entries) {
       if (snap.files['$_prefix${e.key}'] != gitBlobSha(e.value)) {
-        put['$_prefix${e.key}'] = e.value;
+        put['$_prefix${e.key}'] = bytesSource(e.value);
         report.uploaded++;
       }
+    }
+    for (final e in media.entries) {
+      put['$_prefix${e.key}'] = e.value;
+      report.uploaded++;
     }
     final remove = <String>{};
     for (final p in snap.files.keys) {
       if (!p.startsWith(_prefix)) continue;
       final rel = p.substring(_prefix.length);
       final managed = rel.startsWith('entries/') || rel.startsWith('media/');
-      if (managed && !want.containsKey(rel) && !mediaSha.containsKey(rel)) {
+      if (managed && !texts.containsKey(rel) && !keep.contains(rel)) {
         remove.add(p);
         report.deletedRemote++;
       }

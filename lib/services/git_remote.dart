@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as hash;
@@ -10,6 +11,32 @@ String gitBlobSha(List<int> bytes) {
   final header = utf8.encode('blob ${bytes.length}\u0000');
   return hash.sha1.convert([...header, ...bytes]).toString();
 }
+
+/// [gitBlobSha] of a file, streamed: big videos are never read into memory whole.
+Future<String> gitBlobShaFile(File f) async {
+  final out = _DigestSink();
+  final sink = hash.sha1.startChunkedConversion(out);
+  sink.add(utf8.encode('blob ${await f.length()}\u0000'));
+  await for (final chunk in f.openRead()) {
+    sink.add(chunk);
+  }
+  sink.close();
+  return out.value.toString();
+}
+
+class _DigestSink implements Sink<hash.Digest> {
+  late hash.Digest value;
+  @override
+  void add(hash.Digest data) => value = data;
+  @override
+  void close() {}
+}
+
+/// File contents read only when the upload needs them, one file at a time.
+typedef BlobSource = Future<Uint8List> Function();
+
+BlobSource bytesSource(List<int> bytes) =>
+    () async => Uint8List.fromList(bytes);
 
 class RemoteException implements Exception {
   RemoteException(this.message, {this.statusCode});
@@ -40,7 +67,7 @@ abstract class RemoteRepo {
   /// Returns the new head. Throws [RemoteException] with isConflict when the branch moved.
   Future<String> commit(
     RemoteSnapshot base, {
-    required Map<String, Uint8List> put,
+    required Map<String, BlobSource> put,
     required Set<String> remove,
     required String message,
   });
@@ -199,7 +226,7 @@ class GitHubRepo implements RemoteRepo {
   @override
   Future<String> commit(
     RemoteSnapshot base, {
-    required Map<String, Uint8List> put,
+    required Map<String, BlobSource> put,
     required Set<String> remove,
     required String message,
   }) async {
@@ -207,25 +234,27 @@ class GitHubRepo implements RemoteRepo {
     if (current.isEmpty) {
       // The Git Data API refuses an empty repository; the Contents API can create the first file.
       final readme = put.keys.firstWhere((p) => p.endsWith('README.md'), orElse: () => put.keys.first);
+      final first = await put[readme]!();
       await _send(
         'PUT',
         '/contents/${Uri.encodeComponent(readme).replaceAll('%2F', '/')}',
-        body: {'message': message, 'content': base64.encode(put[readme]!), 'branch': config.branch},
+        body: {'message': message, 'content': base64.encode(first), 'branch': config.branch},
       );
       current = await snapshot();
-      if (current.files[readme] == gitBlobSha(put[readme]!)) {
+      if (current.files[readme] == gitBlobSha(first)) {
         put = Map.of(put)..remove(readme);
       }
       if (put.isEmpty && remove.isEmpty) return current.headSha!;
     }
     final items = <Map<String, dynamic>>[];
     for (final e in put.entries) {
-      final sha = gitBlobSha(e.value);
+      final bytes = await e.value();
+      final sha = gitBlobSha(bytes);
       if (current.files[e.key] == sha) continue;
-      if (e.value.length > maxBlobBytes) {
+      if (bytes.length > maxBlobBytes) {
         throw RemoteException('${e.key}: file is larger than 95 MB');
       }
-      final blob = await _send('POST', '/git/blobs', body: {'content': base64.encode(e.value), 'encoding': 'base64'});
+      final blob = await _send('POST', '/git/blobs', body: {'content': base64.encode(bytes), 'encoding': 'base64'});
       items.add({'path': e.key, 'mode': '100644', 'type': 'blob', 'sha': blob['sha']});
     }
     for (final p in remove) {
@@ -271,7 +300,7 @@ class MemoryRemote implements RemoteRepo {
   @override
   Future<String> commit(
     RemoteSnapshot base, {
-    required Map<String, Uint8List> put,
+    required Map<String, BlobSource> put,
     required Set<String> remove,
     required String message,
   }) async {
@@ -279,8 +308,9 @@ class MemoryRemote implements RemoteRepo {
     beforeCommit = null;
     if (base.headSha != head) throw RemoteException('moved', statusCode: 422);
     for (final e in put.entries) {
-      final sha = gitBlobSha(e.value);
-      blobs[sha] = e.value;
+      final bytes = await e.value();
+      final sha = gitBlobSha(bytes);
+      blobs[sha] = bytes;
       files[e.key] = sha;
     }
     remove.forEach(files.remove);
