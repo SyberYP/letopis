@@ -12,17 +12,36 @@ class ImportPreview {
 }
 
 const _months = {
-  'января': 1, 'февраля': 2, 'марта': 3, 'апреля': 4, 'мая': 5, 'июня': 6,
-  'июля': 7, 'августа': 8, 'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12,
-  'январь': 1, 'февраль': 2, 'март': 3, 'апрель': 4, 'май': 5, 'июнь': 6,
-  'июль': 7, 'август': 8, 'сентябрь': 9, 'октябрь': 10, 'ноябрь': 11, 'декабрь': 12,
+  'января': 1,
+  'февраля': 2,
+  'марта': 3,
+  'апреля': 4,
+  'мая': 5,
+  'июня': 6,
+  'июля': 7,
+  'августа': 8,
+  'сентября': 9,
+  'октября': 10,
+  'ноября': 11,
+  'декабря': 12,
+  'январь': 1,
+  'февраль': 2,
+  'март': 3,
+  'апрель': 4,
+  'май': 5,
+  'июнь': 6,
+  'июль': 7,
+  'август': 8,
+  'сентябрь': 9,
+  'октябрь': 10,
+  'ноябрь': 11,
+  'декабрь': 12,
 };
 
 final _separator = RegExp(r'\r?\n-{20,}[ \t]*(\r?\n|$)');
 
 /// `27 Сентября 2026 Воскресенье 01:44`
-final _diaryHeader =
-    RegExp(r'^(\d{1,2}) ([А-Яа-яЁё]+) (\d{4})(?: [А-Яа-яЁё]+)? (\d{1,2}):(\d{2})\s*$');
+final _diaryHeader = RegExp(r'^(\d{1,2}) ([А-Яа-яЁё]+) (\d{4})(?: [А-Яа-яЁё]+)? (\d{1,2}):(\d{2})\s*$');
 
 /// `2025/05/03 text…` (MyDiary export)
 final _myDiaryHeader = RegExp(r'^(\d{4})/(\d{2})/(\d{2})(?: (\d{1,2}):(\d{2}))?[ \t]*');
@@ -46,9 +65,7 @@ ImportPreview parseImport(String text, {String fileName = ''}) {
       return ImportPreview('mydiary', [for (final b in blocks) ?_parseMyDiaryBlock(b)]);
     }
   }
-  return ImportPreview('markdown', [
-    entryFromMarkdown(normalized, fallbackTime: dateFromFileName(fileName)),
-  ]);
+  return ImportPreview('markdown', [entryFromMarkdown(normalized, fallbackTime: dateFromFileName(fileName))]);
 }
 
 Entry? _parseDiaryBlock(String block) {
@@ -57,8 +74,13 @@ Entry? _parseDiaryBlock(String block) {
   if (m == null) return null;
   final month = _months[m.group(2)!.toLowerCase()];
   if (month == null) return null;
-  final created = DateTime(int.parse(m.group(3)!), month, int.parse(m.group(1)!),
-      int.parse(m.group(4)!), int.parse(m.group(5)!));
+  final created = DateTime(
+    int.parse(m.group(3)!),
+    month,
+    int.parse(m.group(1)!),
+    int.parse(m.group(4)!),
+    int.parse(m.group(5)!),
+  );
   var title = '';
   final tags = <String>[];
   var bodyStart = 1;
@@ -86,16 +108,20 @@ Entry? _parseMyDiaryBlock(String block) {
     m.group(4) == null ? 12 : int.parse(m.group(4)!),
     m.group(5) == null ? 0 : int.parse(m.group(5)!),
   );
-  return Entry(
-      id: newId(), created: created, updated: created, body: text.substring(m.end).trim());
+  return Entry(id: newId(), created: created, updated: created, body: text.substring(m.end).trim());
 }
 
 /// `2026-10-25-0941-title.md` or `2026-10-25.md` → a time.
 DateTime? dateFromFileName(String name) {
   final m = RegExp(r'(\d{4})-(\d{2})-(\d{2})(?:[-_T ](\d{2})[:\-]?(\d{2}))?').firstMatch(name);
   if (m == null) return null;
-  return DateTime(int.parse(m.group(1)!), int.parse(m.group(2)!), int.parse(m.group(3)!),
-      int.tryParse(m.group(4) ?? '') ?? 12, int.tryParse(m.group(5) ?? '') ?? 0);
+  return DateTime(
+    int.parse(m.group(1)!),
+    int.parse(m.group(2)!),
+    int.parse(m.group(3)!),
+    int.tryParse(m.group(4) ?? '') ?? 12,
+    int.tryParse(m.group(5) ?? '') ?? 0,
+  );
 }
 
 /// Key that identifies the same entry imported twice.

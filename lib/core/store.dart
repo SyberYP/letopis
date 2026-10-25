@@ -13,12 +13,11 @@ import 'vault.dart';
 /// Encrypted files on disk, the same layout as the encrypted git mirror:
 ///
 ///   vault.json, settings.enc, tombstones.enc, sync.enc (device only)
-///   entries/<id>.md.enc, media/<id>.enc, thumbs/<id>.enc
+///   `entries/<id>.md.enc`, `media/<id>.enc`, `thumbs/<id>.enc`
 ///
 /// All entries are decrypted into memory on unlock; media stays encrypted until opened.
 class EntryStore {
-  EntryStore(this.root, this.box, {Directory? tempDir})
-      : tempDir = tempDir ?? Directory('${root.path}/.tmp');
+  EntryStore(this.root, this.box, {Directory? tempDir}) : tempDir = tempDir ?? Directory('${root.path}/.tmp');
 
   final Directory root;
   final CryptoBox box;
@@ -150,8 +149,13 @@ class EntryStore {
   // ---- media -------------------------------------------------------------------------------
 
   /// Encrypts [source] into the store. Photos also get an encrypted thumbnail.
-  Future<Attachment> importMedia(File source,
-      {String? name, String? mime, int? durationMs, bool deleteSource = false}) async {
+  Future<Attachment> importMedia(
+    File source, {
+    String? name,
+    String? mime,
+    int? durationMs,
+    bool deleteSource = false,
+  }) async {
     final id = newId();
     final fileName = name ?? source.uri.pathSegments.last;
     final type = mime ?? mimeFromName(fileName);
@@ -201,6 +205,8 @@ class EntryStore {
   /// Decrypted media bytes (for photos shown in full).
   Future<Uint8List> mediaBytes(String id) async =>
       box.decrypt(await file(mediaPath(id)).readAsBytes(), context: 'media/$id');
+
+  Uint8List? cachedThumbnail(String id) => _thumbCache[id];
 
   Future<Uint8List?> thumbnail(String id) async {
     final cached = _thumbCache[id];
@@ -310,12 +316,12 @@ String mimeFromName(String name) {
 
 /// JPEG thumbnail ≤ [maxSide] px, made in a background isolate. Null if the image can't be read.
 Future<Uint8List?> makeThumbnail(Uint8List bytes, {int maxSide = 480}) => Isolate.run(() {
-      final decoded = img.decodeImage(bytes);
-      if (decoded == null) return null;
-      final oriented = img.bakeOrientation(decoded);
-      final w = oriented.width, h = oriented.height;
-      final scaled = w >= h
-          ? img.copyResize(oriented, width: w > maxSide ? maxSide : w)
-          : img.copyResize(oriented, height: h > maxSide ? maxSide : h);
-      return Uint8List.fromList(img.encodeJpg(scaled, quality: 80));
-    });
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return null;
+  final oriented = img.bakeOrientation(decoded);
+  final w = oriented.width, h = oriented.height;
+  final scaled = w >= h
+      ? img.copyResize(oriented, width: w > maxSide ? maxSide : w)
+      : img.copyResize(oriented, height: h > maxSide ? maxSide : h);
+  return Uint8List.fromList(img.encodeJpg(scaled, quality: 80));
+});

@@ -28,17 +28,21 @@ class AiConfig {
 
   bool get isConfigured => apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
 
-  AiConfig copyWith({String? baseUrl, String? apiKey, String? model, bool? autoTag, bool? consented}) =>
-      AiConfig(
-        baseUrl: baseUrl ?? this.baseUrl,
-        apiKey: apiKey ?? this.apiKey,
-        model: model ?? this.model,
-        autoTag: autoTag ?? this.autoTag,
-        consented: consented ?? this.consented,
-      );
+  AiConfig copyWith({String? baseUrl, String? apiKey, String? model, bool? autoTag, bool? consented}) => AiConfig(
+    baseUrl: baseUrl ?? this.baseUrl,
+    apiKey: apiKey ?? this.apiKey,
+    model: model ?? this.model,
+    autoTag: autoTag ?? this.autoTag,
+    consented: consented ?? this.consented,
+  );
 
-  Map<String, dynamic> toJson() =>
-      {'base_url': baseUrl, 'api_key': apiKey, 'model': model, 'auto': autoTag, 'consented': consented};
+  Map<String, dynamic> toJson() => {
+    'base_url': baseUrl,
+    'api_key': apiKey,
+    'model': model,
+    'auto': autoTag,
+    'consented': consented,
+  };
 
   factory AiConfig.fromJson(Map<String, dynamic>? j) => j == null
       ? const AiConfig()
@@ -101,15 +105,17 @@ class AiTagger {
     final http.Response res;
     try {
       res = await _client
-          .post(uri,
-              headers: {
-                'Authorization': 'Bearer ${config.apiKey.trim()}',
-                'Content-Type': 'application/json',
-                // OpenRouter app attribution headers; other providers ignore them.
-                'HTTP-Referer': 'https://github.com/SyberYP/letopis',
-                'X-Title': 'Letopis',
-              },
-              body: jsonEncode(buildRequest(entry, knownTags)))
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer ${config.apiKey.trim()}',
+              'Content-Type': 'application/json',
+              // OpenRouter app attribution headers; other providers ignore them.
+              'HTTP-Referer': 'https://github.com/SyberYP/letopis',
+              'X-Title': 'Letopis',
+            },
+            body: jsonEncode(buildRequest(entry, knownTags)),
+          )
           .timeout(const Duration(seconds: 45));
     } catch (e) {
       throw AiException('network: $e');

@@ -9,12 +9,7 @@ class WrongPasswordException implements Exception {}
 /// password-derived key (KEK). Safe to store next to the data and in git: without the
 /// password it reveals nothing.
 class VaultFile {
-  VaultFile(
-      {required this.kdf,
-      required this.salt,
-      required this.wrappedDek,
-      required this.check,
-      required this.id});
+  VaultFile({required this.kdf, required this.salt, required this.wrappedDek, required this.check, required this.id});
 
   static const _context = 'vault/dek';
   static const _checkContext = 'vault/check';
@@ -30,8 +25,11 @@ class VaultFile {
   /// Random id of this vault; lets a device tell its own repo from someone else's.
   final String id;
 
-  static Future<(VaultFile, CryptoBox)> create(String password,
-      {KdfParams kdf = const KdfParams(), List<int>? dek}) async {
+  static Future<(VaultFile, CryptoBox)> create(
+    String password, {
+    KdfParams kdf = const KdfParams(),
+    List<int>? dek,
+  }) async {
     final salt = randomBytes(16);
     final kek = CryptoBox(await deriveKey(password, salt, kdf));
     final dekBytes = dek ?? randomBytes(32);
@@ -40,10 +38,7 @@ class VaultFile {
     final box = CryptoBox(dekBytes);
     final check = await box.encrypt(utf8.encode(_checkText), context: _checkContext);
     final id = base64Url.encode(randomBytes(12));
-    return (
-      VaultFile(kdf: kdf, salt: salt, wrappedDek: wrapped, check: check, id: id),
-      box,
-    );
+    return (VaultFile(kdf: kdf, salt: salt, wrappedDek: wrapped, check: check, id: id), box);
   }
 
   Future<CryptoBox> unlock(String password) async {
@@ -74,18 +69,17 @@ class VaultFile {
   Future<VaultFile> rewrap(CryptoBox dek, String newPassword) async {
     final (file, box) = await create(newPassword, kdf: kdf, dek: dek.keyBytes);
     box.wipe();
-    return VaultFile(
-        kdf: file.kdf, salt: file.salt, wrappedDek: file.wrappedDek, check: file.check, id: id);
+    return VaultFile(kdf: file.kdf, salt: file.salt, wrappedDek: file.wrappedDek, check: file.check, id: id);
   }
 
   Map<String, dynamic> toJson() => {
-        'format': 'letopis-vault',
-        'v': 1,
-        'id': id,
-        'kdf': {...kdf.toJson(), 'salt': base64.encode(salt)},
-        'dek': base64.encode(wrappedDek),
-        'check': base64.encode(check),
-      };
+    'format': 'letopis-vault',
+    'v': 1,
+    'id': id,
+    'kdf': {...kdf.toJson(), 'salt': base64.encode(salt)},
+    'dek': base64.encode(wrappedDek),
+    'check': base64.encode(check),
+  };
 
   factory VaultFile.fromJson(Map<String, dynamic> j) {
     if (j['format'] != 'letopis-vault') throw const FormatException('not a Letopis vault');

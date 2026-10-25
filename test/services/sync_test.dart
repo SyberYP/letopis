@@ -1,3 +1,4 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
@@ -202,10 +203,30 @@ void main() {
         calls.add('${req.method} ${req.url.path}');
         expect(req.headers['Authorization'], 'Bearer tok');
         final p = req.url.path;
-        if (p.endsWith('/git/ref/heads/main')) return http.Response(jsonEncode({'object': {'sha': 'h1'}}), 200);
-        if (p.endsWith('/git/commits/h1')) return http.Response(jsonEncode({'tree': {'sha': 't1'}}), 200);
+        if (p.endsWith('/git/ref/heads/main'))
+          return http.Response(
+            jsonEncode({
+              'object': {'sha': 'h1'},
+            }),
+            200,
+          );
+        if (p.endsWith('/git/commits/h1'))
+          return http.Response(
+            jsonEncode({
+              'tree': {'sha': 't1'},
+            }),
+            200,
+          );
         if (p.endsWith('/git/trees/t1')) {
-          return http.Response(jsonEncode({'truncated': false, 'tree': [{'path': 'd/a.enc', 'type': 'blob', 'sha': 's1'}]}), 200);
+          return http.Response(
+            jsonEncode({
+              'truncated': false,
+              'tree': [
+                {'path': 'd/a.enc', 'type': 'blob', 'sha': 's1'},
+              ],
+            }),
+            200,
+          );
         }
         if (p.endsWith('/git/blobs')) return http.Response(jsonEncode({'sha': 'b2'}), 201);
         if (p.endsWith('/git/trees')) {
@@ -218,17 +239,30 @@ void main() {
         if (p.endsWith('/git/refs/heads/main')) return http.Response('{}', 200);
         return http.Response('not found', 404);
       });
-      final repo = GitHubRepo(const GitHubConfig(owner: 'o', repo: 'r', token: 'tok'), client: client);
+      final repo = GitHubRepo(
+        const GitHubConfig(owner: 'o', repo: 'r', token: 'tok'),
+        client: client,
+      );
       final snap = await repo.snapshot();
       expect(snap.files, {'d/a.enc': 's1'});
-      final head = await repo.commit(snap, put: {'d/b.enc': Uint8List.fromList([1])}, remove: {'d/a.enc'}, message: 'm');
+      final head = await repo.commit(
+        snap,
+        put: {
+          'd/b.enc': Uint8List.fromList([1]),
+        },
+        remove: {'d/a.enc'},
+        message: 'm',
+      );
       expect(head, 'h2');
       expect(calls.last, 'PATCH /repos/o/r/git/refs/heads/main');
     });
 
     test('missing branch is an empty snapshot', () async {
       final client = MockClient((req) async => http.Response('{"message":"Git Repository is empty."}', 409));
-      final repo = GitHubRepo(const GitHubConfig(owner: 'o', repo: 'r', token: 'tok'), client: client);
+      final repo = GitHubRepo(
+        const GitHubConfig(owner: 'o', repo: 'r', token: 'tok'),
+        client: client,
+      );
       expect((await repo.snapshot()).isEmpty, isTrue);
     });
   });
@@ -248,12 +282,17 @@ void main() {
         expect(req.headers['Authorization'], 'Bearer key');
         body = jsonDecode(req.body) as Map;
         return http.Response.bytes(
-            utf8.encode(jsonEncode({
+          utf8.encode(
+            jsonEncode({
               'choices': [
-                {'message': {'content': '{"tags":["семья","роды","радость"]}'}}
-              ]
-            })),
-            200);
+                {
+                  'message': {'content': '{"tags":["семья","роды","радость"]}'},
+                },
+              ],
+            }),
+          ),
+          200,
+        );
       });
       final tagger = AiTagger(const AiConfig(apiKey: 'key'), client: client);
       final e = Entry.create()..body = 'Сегодня #семья';
@@ -266,8 +305,10 @@ void main() {
     test('reports HTTP errors with the provider message', () async {
       final client = MockClient((_) async => http.Response('{"error":{"message":"No credits"}}', 402));
       final tagger = AiTagger(const AiConfig(apiKey: 'key'), client: client);
-      await expectLater(tagger.suggest(Entry.create()..body = 'x', []),
-          throwsA(isA<AiException>().having((e) => e.message, 'message', contains('No credits'))));
+      await expectLater(
+        tagger.suggest(Entry.create()..body = 'x', []),
+        throwsA(isA<AiException>().having((e) => e.message, 'message', contains('No credits'))),
+      );
     });
   });
 }

@@ -5,7 +5,8 @@ import 'package:letopis/services/importer.dart';
 
 void main() {
   test('diary export: date, title with category, body', () {
-    const text = '27 Сентября 2026 Воскресенье 01:44\n'
+    const text =
+        '27 Сентября 2026 Воскресенье 01:44\n'
         'Возвращаюсь (Мысли)\n'
         'Первая строка.\nВторая.\n'
         '-------------------------\n'

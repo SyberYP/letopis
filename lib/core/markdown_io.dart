@@ -101,22 +101,21 @@ String rewriteAttachmentLinks(String body, String Function(String id) resolve) =
 
 /// Markdown snippet to insert for a new attachment.
 String attachmentMarkdown(Attachment a, {String? label}) => switch (a.type) {
-      AttachmentType.photo => '![${label ?? ''}](${attachmentUri(a.id)})',
-      AttachmentType.video => '[🎬 ${label ?? a.name}](${attachmentUri(a.id)})',
-      AttachmentType.audio => '[🎙 ${label ?? a.name}](${attachmentUri(a.id)})',
-      AttachmentType.file => '[📎 ${label ?? a.name}](${attachmentUri(a.id)})',
-    };
+  AttachmentType.photo => '![${label ?? ''}](${attachmentUri(a.id)})',
+  AttachmentType.video => '[🎬 ${label ?? a.name}](${attachmentUri(a.id)})',
+  AttachmentType.audio => '[🎙 ${label ?? a.name}](${attachmentUri(a.id)})',
+  AttachmentType.file => '[📎 ${label ?? a.name}](${attachmentUri(a.id)})',
+};
 
 /// A file-system friendly slug: `2026-10-25-0941-utro` style, keeps Cyrillic.
 String entrySlug(Entry e, {int maxWords = 6}) {
   final t = e.created.toLocal();
   String two(int v) => v.toString().padLeft(2, '0');
   final stamp = '${t.year}-${two(t.month)}-${two(t.day)}-${two(t.hour)}${two(t.minute)}';
-  final words = RegExp(r'[\p{L}\p{N}]+', unicode: true)
-      .allMatches(e.displayTitle.toLowerCase())
-      .map((m) => m.group(0)!)
-      .take(maxWords)
-      .join('-');
+  final words = RegExp(
+    r'[\p{L}\p{N}]+',
+    unicode: true,
+  ).allMatches(e.displayTitle.toLowerCase()).map((m) => m.group(0)!).take(maxWords).join('-');
   final short = words.length > 50 ? words.substring(0, 50) : words;
   return short.isEmpty ? stamp : '$stamp-$short';
 }

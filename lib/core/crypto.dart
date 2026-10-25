@@ -12,7 +12,7 @@ import 'package:cryptography/cryptography.dart';
 ///   chunk i = AES-256-GCM(cleartext[i]) (n bytes) + tag (16)
 ///   nonce(i) = prefix || u32 BE(i); aad(i) = context || final-flag byte (1 = last chunk)
 ///
-/// The final flag stops truncation; the context (a logical path like "entries/<id>") stops a
+/// The final flag stops truncation; the context (a logical path like `entries/<id>`) stops a
 /// valid ciphertext being swapped into another file.
 class Ltp1 {
   static const magic = [0x4C, 0x54, 0x50, 0x31]; // LTP1
@@ -40,8 +40,7 @@ Uint8List randomBytes(int n) {
 
 /// AES-256-GCM over a data key (DEK). Holds the key bytes so it can be wiped on lock.
 class CryptoBox {
-  CryptoBox(List<int> keyBytes, {this.chunkSize = Ltp1.defaultChunk})
-      : _keyBytes = Uint8List.fromList(keyBytes) {
+  CryptoBox(List<int> keyBytes, {this.chunkSize = Ltp1.defaultChunk}) : _keyBytes = Uint8List.fromList(keyBytes) {
     if (keyBytes.length != 32) throw ArgumentError('key must be 32 bytes');
   }
 
@@ -90,8 +89,12 @@ class CryptoBox {
     do {
       final end = min(offset + chunkSize, clear.length);
       final last = end == clear.length;
-      final box = await _aes.encrypt(clear.sublist(offset, end),
-          secretKey: key, nonce: _nonce(prefix, index), aad: _aad(ctx, last));
+      final box = await _aes.encrypt(
+        clear.sublist(offset, end),
+        secretKey: key,
+        nonce: _nonce(prefix, index),
+        aad: _aad(ctx, last),
+      );
       out
         ..add(box.cipherText)
         ..add(box.mac.bytes);
@@ -121,13 +124,11 @@ class CryptoBox {
     return out.takeBytes();
   }
 
-  Future<List<int>> _open(
-      List<int> part, SecretKey key, List<int> prefix, int index, List<int> ctx, bool last) async {
+  Future<List<int>> _open(List<int> part, SecretKey key, List<int> prefix, int index, List<int> ctx, bool last) async {
     final split = part.length - Ltp1.tagLength;
     try {
       return await _aes.decrypt(
-        SecretBox(part.sublist(0, split),
-            nonce: _nonce(prefix, index), mac: Mac(part.sublist(split))),
+        SecretBox(part.sublist(0, split), nonce: _nonce(prefix, index), mac: Mac(part.sublist(split))),
         secretKey: key,
         aad: _aad(ctx, last),
       );
@@ -163,8 +164,7 @@ class CryptoBox {
         final clear = await input.read(min(chunkSize, total - done));
         done += clear.length;
         final last = done >= total;
-        final box = await _aes.encrypt(clear,
-            secretKey: key, nonce: _nonce(prefix, index), aad: _aad(ctx, last));
+        final box = await _aes.encrypt(clear, secretKey: key, nonce: _nonce(prefix, index), aad: _aad(ctx, last));
         await output.writeFrom(box.cipherText);
         await output.writeFrom(box.mac.bytes);
         index++;
@@ -215,13 +215,11 @@ class KdfParams {
   final int iterations;
   final int parallelism;
 
-  Map<String, dynamic> toJson() =>
-      {'alg': 'argon2id', 'm': memoryKiB, 't': iterations, 'p': parallelism};
+  Map<String, dynamic> toJson() => {'alg': 'argon2id', 'm': memoryKiB, 't': iterations, 'p': parallelism};
 
   factory KdfParams.fromJson(Map<String, dynamic> j) {
     if (j['alg'] != 'argon2id') throw FormatException('unknown kdf ${j['alg']}');
-    return KdfParams(
-        memoryKiB: j['m'] as int, iterations: j['t'] as int, parallelism: j['p'] as int);
+    return KdfParams(memoryKiB: j['m'] as int, iterations: j['t'] as int, parallelism: j['p'] as int);
   }
 }
 

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as hash;
 import 'package:http/http.dart' as http;
 
-/// Git blob id of [bytes]: sha1("blob <len>\0" + bytes). Lets sync compare files without
+/// Git blob id of [bytes]: `sha1("blob <len>\0" + bytes)`. Lets sync compare files without
 /// downloading them.
 String gitBlobSha(List<int> bytes) {
   final header = utf8.encode('blob ${bytes.length}\u0000');
@@ -38,8 +38,12 @@ abstract class RemoteRepo {
 
   /// One commit on top of [base]: [put] adds or replaces files, [remove] deletes them.
   /// Returns the new head. Throws [RemoteException] with isConflict when the branch moved.
-  Future<String> commit(RemoteSnapshot base,
-      {required Map<String, Uint8List> put, required Set<String> remove, required String message});
+  Future<String> commit(
+    RemoteSnapshot base, {
+    required Map<String, Uint8List> put,
+    required Set<String> remove,
+    required String message,
+  });
 }
 
 class GitHubConfig {
@@ -70,34 +74,34 @@ class GitHubConfig {
   bool get isConfigured => owner.isNotEmpty && repo.isNotEmpty && token.isNotEmpty;
   String get key => '$owner/$repo@$branch/$dir/${plain ? 'plain' : 'enc'}';
 
-  GitHubConfig copyWith(
-          {String? owner,
-          String? repo,
-          String? branch,
-          String? dir,
-          String? token,
-          bool? plain,
-          bool? autoSync}) =>
-      GitHubConfig(
-        owner: owner ?? this.owner,
-        repo: repo ?? this.repo,
-        branch: branch ?? this.branch,
-        dir: dir ?? this.dir,
-        token: token ?? this.token,
-        plain: plain ?? this.plain,
-        autoSync: autoSync ?? this.autoSync,
-        apiBase: apiBase,
-      );
+  GitHubConfig copyWith({
+    String? owner,
+    String? repo,
+    String? branch,
+    String? dir,
+    String? token,
+    bool? plain,
+    bool? autoSync,
+  }) => GitHubConfig(
+    owner: owner ?? this.owner,
+    repo: repo ?? this.repo,
+    branch: branch ?? this.branch,
+    dir: dir ?? this.dir,
+    token: token ?? this.token,
+    plain: plain ?? this.plain,
+    autoSync: autoSync ?? this.autoSync,
+    apiBase: apiBase,
+  );
 
   Map<String, dynamic> toJson() => {
-        'owner': owner,
-        'repo': repo,
-        'branch': branch,
-        'dir': dir,
-        'token': token,
-        'plain': plain,
-        'auto': autoSync,
-      };
+    'owner': owner,
+    'repo': repo,
+    'branch': branch,
+    'dir': dir,
+    'token': token,
+    'plain': plain,
+    'auto': autoSync,
+  };
 
   factory GitHubConfig.fromJson(Map<String, dynamic>? j) => j == null
       ? const GitHubConfig()
@@ -113,8 +117,7 @@ class GitHubConfig {
 
   /// Accepts `owner/repo`, `https://github.com/owner/repo(.git)` or `git@github.com:owner/repo`.
   static (String, String)? parseRepo(String input) {
-    final m = RegExp(r'(?:github\.com[/:])?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$')
-        .firstMatch(input.trim());
+    final m = RegExp(r'(?:github\.com[/:])?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$').firstMatch(input.trim());
     if (m == null) return null;
     return (m.group(1)!, m.group(2)!);
   }
@@ -136,11 +139,11 @@ class GitHubRepo implements RemoteRepo {
   String get _repoUrl => '${config.apiBase}/repos/${config.owner}/${config.repo}';
 
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer ${config.token.trim()}',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer ${config.token.trim()}',
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json',
+  };
 
   Future<dynamic> _send(String method, String path, {Object? body, Set<int> allow = const {}}) async {
     final uri = Uri.parse(path.startsWith('http') ? path : '$_repoUrl$path');
@@ -148,8 +151,7 @@ class GitHubRepo implements RemoteRepo {
     if (body != null) req.body = jsonEncode(body);
     final http.Response res;
     try {
-      res = await http.Response.fromStream(
-          await _client.send(req).timeout(const Duration(seconds: 60)));
+      res = await http.Response.fromStream(await _client.send(req).timeout(const Duration(seconds: 60)));
     } catch (e) {
       throw RemoteException('network: $e');
     }
@@ -183,7 +185,7 @@ class GitHubRepo implements RemoteRepo {
     }
     final files = <String, String>{
       for (final t in tree['tree'] as List)
-        if (t['type'] == 'blob') t['path'] as String: t['sha'] as String
+        if (t['type'] == 'blob') t['path'] as String: t['sha'] as String,
     };
     return RemoteSnapshot(headSha: head, treeSha: treeSha, files: files);
   }
@@ -195,19 +197,21 @@ class GitHubRepo implements RemoteRepo {
   }
 
   @override
-  Future<String> commit(RemoteSnapshot base,
-      {required Map<String, Uint8List> put,
-      required Set<String> remove,
-      required String message}) async {
+  Future<String> commit(
+    RemoteSnapshot base, {
+    required Map<String, Uint8List> put,
+    required Set<String> remove,
+    required String message,
+  }) async {
     var current = base;
     if (current.isEmpty) {
       // The Git Data API refuses an empty repository; the Contents API can create the first file.
       final readme = put.keys.firstWhere((p) => p.endsWith('README.md'), orElse: () => put.keys.first);
-      await _send('PUT', '/contents/${Uri.encodeComponent(readme).replaceAll('%2F', '/')}', body: {
-        'message': message,
-        'content': base64.encode(put[readme]!),
-        'branch': config.branch,
-      });
+      await _send(
+        'PUT',
+        '/contents/${Uri.encodeComponent(readme).replaceAll('%2F', '/')}',
+        body: {'message': message, 'content': base64.encode(put[readme]!), 'branch': config.branch},
+      );
       current = await snapshot();
       if (current.files[readme] == gitBlobSha(put[readme]!)) {
         put = Map.of(put)..remove(readme);
@@ -221,8 +225,7 @@ class GitHubRepo implements RemoteRepo {
       if (e.value.length > maxBlobBytes) {
         throw RemoteException('${e.key}: file is larger than 95 MB');
       }
-      final blob = await _send('POST', '/git/blobs',
-          body: {'content': base64.encode(e.value), 'encoding': 'base64'});
+      final blob = await _send('POST', '/git/blobs', body: {'content': base64.encode(e.value), 'encoding': 'base64'});
       items.add({'path': e.key, 'mode': '100644', 'type': 'blob', 'sha': blob['sha']});
     }
     for (final p in remove) {
@@ -232,11 +235,15 @@ class GitHubRepo implements RemoteRepo {
     }
     if (items.isEmpty) return current.headSha!;
     final tree = await _send('POST', '/git/trees', body: {'base_tree': current.treeSha, 'tree': items});
-    final commit = await _send('POST', '/git/commits', body: {
-      'message': message,
-      'tree': tree['sha'],
-      'parents': [current.headSha],
-    });
+    final commit = await _send(
+      'POST',
+      '/git/commits',
+      body: {
+        'message': message,
+        'tree': tree['sha'],
+        'parents': [current.headSha],
+      },
+    );
     await _send('PATCH', '/git/refs/heads/${config.branch}', body: {'sha': commit['sha'], 'force': false});
     return commit['sha'] as String;
   }
@@ -256,17 +263,18 @@ class MemoryRemote implements RemoteRepo {
   String get label => 'memory';
 
   @override
-  Future<RemoteSnapshot> snapshot() async =>
-      RemoteSnapshot(headSha: head, treeSha: head, files: Map.of(files));
+  Future<RemoteSnapshot> snapshot() async => RemoteSnapshot(headSha: head, treeSha: head, files: Map.of(files));
 
   @override
   Future<Uint8List> readBlob(String sha) async => blobs[sha]!;
 
   @override
-  Future<String> commit(RemoteSnapshot base,
-      {required Map<String, Uint8List> put,
-      required Set<String> remove,
-      required String message}) async {
+  Future<String> commit(
+    RemoteSnapshot base, {
+    required Map<String, Uint8List> put,
+    required Set<String> remove,
+    required String message,
+  }) async {
     beforeCommit?.call();
     beforeCommit = null;
     if (base.headSha != head) throw RemoteException('moved', statusCode: 422);

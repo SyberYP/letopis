@@ -52,22 +52,22 @@ class Attachment {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type.name,
-        'name': name,
-        'mime': mime,
-        if (size > 0) 'size': size,
-        if (durationMs != null) 'duration_ms': durationMs,
-      };
+    'id': id,
+    'type': type.name,
+    'name': name,
+    'mime': mime,
+    if (size > 0) 'size': size,
+    if (durationMs != null) 'duration_ms': durationMs,
+  };
 
   factory Attachment.fromJson(Map j) => Attachment(
-        id: '${j['id']}',
-        type: AttachmentType.parse(j['type'] as String?),
-        name: '${j['name'] ?? j['id']}',
-        mime: '${j['mime'] ?? 'application/octet-stream'}',
-        size: (j['size'] as num?)?.toInt() ?? 0,
-        durationMs: (j['duration_ms'] as num?)?.toInt(),
-      );
+    id: '${j['id']}',
+    type: AttachmentType.parse(j['type'] as String?),
+    name: '${j['name'] ?? j['id']}',
+    mime: '${j['mime'] ?? 'application/octet-stream'}',
+    size: (j['size'] as num?)?.toInt() ?? 0,
+    durationMs: (j['duration_ms'] as num?)?.toInt(),
+  );
 }
 
 class Entry {
@@ -80,8 +80,8 @@ class Entry {
     List<String>? tags,
     List<Attachment>? attachments,
     this.mood,
-  })  : tags = tags ?? [],
-        attachments = attachments ?? [];
+  }) : tags = tags ?? [],
+       attachments = attachments ?? [];
 
   factory Entry.create({DateTime? at}) {
     final now = at ?? DateTime.now();
@@ -104,7 +104,7 @@ class Entry {
     final seen = <String>{};
     return [
       for (final t in [...tags, ...extractHashtags(body)])
-        if (seen.add(t)) t
+        if (seen.add(t)) t,
     ];
   }
 
@@ -126,15 +126,15 @@ class Entry {
   int get wordCount => RegExp(r'[\p{L}\p{N}]+', unicode: true).allMatches(body).length;
 
   Entry copy() => Entry(
-        id: id,
-        created: created,
-        updated: updated,
-        title: title,
-        body: body,
-        tags: List.of(tags),
-        attachments: List.of(attachments),
-        mood: mood,
-      );
+    id: id,
+    created: created,
+    updated: updated,
+    title: title,
+    body: body,
+    tags: List.of(tags),
+    attachments: List.of(attachments),
+    mood: mood,
+  );
 
   bool sameContent(Entry o) =>
       title == o.title &&

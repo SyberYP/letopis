@@ -39,8 +39,8 @@ class SyncReport {
 /// Remembered per repository: blob ids at the last sync (the merge base) and a hash cache.
 class SyncState {
   SyncState({this.key = '', Map<String, String>? base, Map<String, List>? hashes, this.lastSync})
-      : base = base ?? {},
-        hashes = hashes ?? {};
+    : base = base ?? {},
+      hashes = hashes ?? {};
 
   String key;
   Map<String, String> base;
@@ -50,11 +50,11 @@ class SyncState {
   DateTime? lastSync;
 
   Map<String, dynamic> toJson() => {
-        'key': key,
-        'base': base,
-        'hashes': hashes,
-        if (lastSync != null) 'last': lastSync!.toIso8601String(),
-      };
+    'key': key,
+    'base': base,
+    'hashes': hashes,
+    if (lastSync != null) 'last': lastSync!.toIso8601String(),
+  };
 
   factory SyncState.fromJson(Map<String, dynamic>? j) => j == null
       ? SyncState()
@@ -92,7 +92,7 @@ class SyncEngine {
   }
 
   Future<SyncReport> run() async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       try {
         return config.plain ? await _mirror() : await _sync();
       } on RemoteException catch (e) {
@@ -111,7 +111,7 @@ class SyncEngine {
     final snap = await remote.snapshot();
     final remoteFiles = <String, String>{
       for (final e in snap.files.entries)
-        if (e.key.startsWith(_prefix)) e.key.substring(_prefix.length): e.value
+        if (e.key.startsWith(_prefix)) e.key.substring(_prefix.length): e.value,
     };
 
     // The remote must hold this diary or nothing yet.
@@ -126,9 +126,11 @@ class SyncEngine {
     final local = await _localHashes(state);
     final put = <String, Uint8List>{};
     final remove = <String>{};
-    final paths = {...local.keys, ...remoteFiles.keys, ...state.base.keys}
-        .where((p) => p.endsWith('.enc') || p == 'vault.json')
-        .toSet();
+    final paths = {
+      ...local.keys,
+      ...remoteFiles.keys,
+      ...state.base.keys,
+    }.where((p) => p.endsWith('.enc') || p == 'vault.json').toSet();
 
     for (final path in paths) {
       final l = local[path], r = remoteFiles[path], b = state.base[path];
@@ -163,8 +165,7 @@ class SyncEngine {
       if (!snap.files.containsKey('${_prefix}README.md')) {
         full['${_prefix}README.md'] = Uint8List.fromList(utf8.encode(_readme));
       }
-      await remote.commit(snap,
-          put: full, remove: {for (final p in remove) '$_prefix$p'}, message: _message(report));
+      await remote.commit(snap, put: full, remove: {for (final p in remove) '$_prefix$p'}, message: _message(report));
       for (final e in put.entries) {
         state.base[e.key] = gitBlobSha(e.value);
       }
@@ -213,7 +214,12 @@ class SyncEngine {
   }
 
   Future<void> _resolveConflict(
-      String path, String? l, String? r, Map<String, Uint8List> put, SyncReport report) async {
+    String path,
+    String? l,
+    String? r,
+    Map<String, Uint8List> put,
+    SyncReport report,
+  ) async {
     final id = _entryId(path);
     if (l == null || r == null) {
       // Deleted on one side, edited on the other: the edit wins.
@@ -233,8 +239,9 @@ class SyncEngine {
     }
     final mine = store.byId(id);
     final theirsBytes = await remote.readBlob(r);
-    final theirs = entryFromMarkdown(utf8.decode(
-        await store.box.decrypt(theirsBytes, context: EntryStore.contextFor(path))));
+    final theirs = entryFromMarkdown(
+      utf8.decode(await store.box.decrypt(theirsBytes, context: EntryStore.contextFor(path))),
+    );
     if (mine == null) {
       await store.writeRaw(path, theirsBytes);
       await store.reload(id);

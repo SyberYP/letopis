@@ -10,7 +10,8 @@ import 'package:letopis/core/store.dart';
 void main() {
   group('hashtags', () {
     test('finds Cyrillic and Latin tags, ignores headings, code, links, numbers', () {
-      const md = '# Заголовок\nСегодня #Семья и #work_life, #дочь-2026.\n'
+      const md =
+          '# Заголовок\nСегодня #Семья и #work_life, #дочь-2026.\n'
           '`#code` ```\n#block\n``` [x](http://a.b/#anchor) #1 a#b #дочь-2026';
       expect(extractHashtags(md), ['семья', 'work_life', 'дочь-2026']);
     });
@@ -109,7 +110,8 @@ void main() {
       final s = EntryStore(dir, box);
       // 1x1 PNG
       final png = base64.decode(
-          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      );
       final src = File('${dir.path}/p.png')..writeAsBytesSync(png);
       final a = await s.importMedia(src);
       expect(a.type, AttachmentType.photo);

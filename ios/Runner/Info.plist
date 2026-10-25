@@ -6,8 +6,16 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Снимать фото и видео для записей дневника.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Записывать голосовые заметки и звук видео.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Прикладывать фото и видео из галереи к записям.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Открывать дневник по Face ID.</string>
 	<key>CFBundleDisplayName</key>
-	<string>Letopis</string>
+	<string>Летопись</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
