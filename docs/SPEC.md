@@ -188,7 +188,7 @@ sync.enc                   состояние синхронизации (SHA ф
 `local_auth`, `image_picker`, `file_picker`, `record`, `just_audio`, `video_player`,
 `flutter_markdown_plus`, `http`, `archive`, `share_plus`, `provider`.
 
-Сборка: локально `flutter test`; APK — GitHub Actions (`.github/workflows/letopis.yml`), артефакт
+Сборка: локально `flutter test`; APK — GitHub Actions (`.github/workflows/build.yml`), артефакт
 `letopis-release.apk`. Подпись: debug-ключ, пока не задан секрет с ключом магазина.
 
 ## 6. Не входит в MVP
