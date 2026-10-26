@@ -48,7 +48,7 @@ final _frontMatter = RegExp(r'^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|
 
 /// Parses Markdown with an optional front matter. Missing fields are filled from [fallbackTime]
 /// (e.g. a date in the file name) and a new id.
-Entry entryFromMarkdown(String text, {DateTime? fallbackTime, String? fallbackId}) {
+Entry entryFromMarkdown(String text, {DateTime? fallbackTime, String? fallbackId, String? forceId}) {
   var meta = <dynamic, dynamic>{};
   var body = text;
   final m = _frontMatter.firstMatch(text);
@@ -74,12 +74,13 @@ Entry entryFromMarkdown(String text, {DateTime? fallbackTime, String? fallbackId
   final rawAtts = meta['attachments'];
   if (rawAtts is List) {
     for (final a in rawAtts) {
-      if (a is Map && a['id'] != null) atts.add(Attachment.fromJson(a));
+      if (a is Map && isSafeId('${a['id']}')) atts.add(Attachment.fromJson(a));
     }
   }
   final mood = meta['mood'];
+  final metaId = meta['id'] == null ? null : '${meta['id']}';
   return Entry(
-    id: '${meta['id'] ?? fallbackId ?? newId()}',
+    id: isSafeId(forceId) ? forceId! : (isSafeId(metaId) ? metaId! : (isSafeId(fallbackId) ? fallbackId! : newId())),
     created: created,
     updated: _parseTime(meta['updated']) ?? created,
     title: meta['title'] == null ? '' : '${meta['title']}',

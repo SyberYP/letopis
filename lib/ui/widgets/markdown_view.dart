@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/entry.dart';
+import '../../l10n/strings.dart';
 import '../theme.dart';
 import 'media.dart';
 
@@ -82,8 +84,39 @@ class EntryMarkdown extends StatelessWidget {
         } else if (href.startsWith('att:')) {
           final a = atts[href.substring(4)];
           if (a != null) openAttachment(context, a, entry.attachments);
+        } else {
+          openExternalLink(context, href);
         }
       },
     );
+  }
+}
+
+/// Opens a web or mail link from an entry after showing where it leads: link text can hide
+/// any address, and opening it tells that site the diary was read.
+Future<void> openExternalLink(BuildContext context, String href) async {
+  final uri = Uri.tryParse(href.trim());
+  if (uri == null || !const {'https', 'http', 'mailto'}.contains(uri.scheme)) return;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.open_in_new_rounded),
+      title: Text(tr('open_link_title')),
+      content: SelectableText(uri.toString()),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('open_link'))),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  try {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+    }
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+    }
   }
 }

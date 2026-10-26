@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/entry.dart';
@@ -107,6 +108,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text('${_index + 1} / ${widget.photos.length}', style: const TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            tooltip: tr('share'),
+            icon: const Icon(Icons.ios_share_rounded),
+            onPressed: () => shareAttachment(context, widget.photos[_index]),
+          ),
+        ],
       ),
       body: PageView.builder(
         controller: _page,
@@ -291,7 +299,17 @@ class _VideoScreenState extends State<VideoScreen> {
     final c = _c;
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: tr('share'),
+            icon: const Icon(Icons.ios_share_rounded),
+            onPressed: () => shareAttachment(context, widget.attachment),
+          ),
+        ],
+      ),
       body: Center(
         child: _error != null
             ? Text(tr('open_file_error'), style: const TextStyle(color: Colors.white))
@@ -317,6 +335,21 @@ class _VideoScreenState extends State<VideoScreen> {
   }
 }
 
+/// Decrypts an attachment into the temp folder (wiped on lock) and hands it to the system share
+/// sheet: save to files, send, or open in another app.
+Future<void> shareAttachment(BuildContext context, Attachment a) async {
+  final app = context.read<AppState>();
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final file = await app.store!.openMedia(a);
+    await app.keepUnlocked(
+      () => SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: a.mime, name: a.name)])),
+    );
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(tr('open_file_error'))));
+  }
+}
+
 /// Opens an attachment in the right viewer.
 void openAttachment(BuildContext context, Attachment a, List<Attachment> all) {
   final nav = Navigator.of(context);
@@ -331,7 +364,8 @@ void openAttachment(BuildContext context, Attachment a, List<Attachment> all) {
     case AttachmentType.video:
       nav.push(MaterialPageRoute(builder: (_) => VideoScreen(a)));
     case AttachmentType.audio:
+      break; // plays inline
     case AttachmentType.file:
-      break; // audio plays inline; other files are shown as a tile
+      shareAttachment(context, a);
   }
 }

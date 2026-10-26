@@ -11,6 +11,7 @@ import 'settings/settings_screen.dart';
 import 'tags_view.dart';
 import 'theme.dart';
 import 'widgets/entry_card.dart';
+import 'widgets/entry_tile.dart';
 import 'widgets/media.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -171,12 +172,18 @@ class _TimelineViewState extends State<TimelineView> {
     final filtering = _query.isNotEmpty || widget.tag != null;
     final memories = filtering ? const <Entry>[] : app.onThisDay();
     final total = app.entries.length;
+    final tiles = app.prefs.tiles;
 
     return CustomScrollView(
       slivers: [
         SliverAppBar.large(
           title: Text(tr('app_name')),
           actions: [
+            IconButton(
+              tooltip: tiles ? tr('view_list') : tr('view_tiles'),
+              icon: Icon(tiles ? Icons.view_agenda_outlined : Icons.grid_view_rounded),
+              onPressed: () => app.updatePrefs((p) => p.tiles = !p.tiles),
+            ),
             IconButton(
               tooltip: tr('search'),
               icon: Icon(_searching ? Icons.close_rounded : Icons.search_rounded),
@@ -259,20 +266,38 @@ class _TimelineViewState extends State<TimelineView> {
                   ),
                 ),
               ),
-              SliverList.builder(
-                itemCount: list.length,
-                itemBuilder: (context, i) {
-                  final e = list[i];
-                  final prev = i == 0 ? null : list[i - 1];
-                  final sameDay = prev != null && DateUtils.isSameDay(prev.created, e.created);
-                  return EntryCard(
-                    entry: e,
-                    showDate: !sameDay,
-                    query: _query,
-                    onTap: () => openEntry(context, e, onTag: widget.onTag),
-                  );
-                },
-              ),
+              if (tiles)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 200,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: list.length,
+                    itemBuilder: (context, i) => EntryTile(
+                      entry: list[i],
+                      onTap: () => openEntry(context, list[i], onTag: widget.onTag),
+                    ),
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    final e = list[i];
+                    final prev = i == 0 ? null : list[i - 1];
+                    final sameDay = prev != null && DateUtils.isSameDay(prev.created, e.created);
+                    return EntryCard(
+                      entry: e,
+                      showDate: !sameDay,
+                      query: _query,
+                      onTap: () => openEntry(context, e, onTag: widget.onTag),
+                    );
+                  },
+                ),
             ],
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 96)),

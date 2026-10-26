@@ -89,8 +89,9 @@ class AttachmentGallery extends StatelessWidget {
             leading: Icon(iconFor(a.type)),
             title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text(_size(a.size)),
+            onTap: () => shareAttachment(context, a),
             trailing: onDelete == null
-                ? null
+                ? const Icon(Icons.ios_share_rounded)
                 : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => onDelete!(a)),
           ),
         ],

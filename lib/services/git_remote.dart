@@ -60,6 +60,9 @@ class RemoteSnapshot {
 /// expose the same primitives.
 abstract class RemoteRepo {
   String get label;
+
+  /// Whether only invited people can read the repository.
+  Future<bool> isPrivate();
   Future<RemoteSnapshot> snapshot();
   Future<Uint8List> readBlob(String sha);
 
@@ -200,6 +203,9 @@ class GitHubRepo implements RemoteRepo {
   }
 
   @override
+  Future<bool> isPrivate() => check();
+
+  @override
   Future<RemoteSnapshot> snapshot() async {
     final ref = await _send('GET', '/git/ref/heads/${config.branch}', allow: {404, 409});
     if (ref == null) return RemoteSnapshot();
@@ -284,6 +290,10 @@ class MemoryRemote implements RemoteRepo {
   Map<String, String> files = {};
   int commits = 0;
   String? head;
+  bool private = true;
+
+  @override
+  Future<bool> isPrivate() async => private;
 
   /// Simulates another device pushing between snapshot and commit.
   void Function()? beforeCommit;

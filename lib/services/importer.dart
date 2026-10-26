@@ -65,7 +65,20 @@ ImportPreview parseImport(String text, {String fileName = ''}) {
       return ImportPreview('mydiary', [for (final b in blocks) ?_parseMyDiaryBlock(b)]);
     }
   }
-  return ImportPreview('markdown', [entryFromMarkdown(normalized, fallbackTime: dateFromFileName(fileName))]);
+  final e = entryFromMarkdown(normalized, fallbackTime: dateFromFileName(fileName));
+  // A new id: an imported file must never overwrite an existing entry. Attachments listed in
+  // its front matter belong to another diary (their media isn't here), so they are dropped.
+  return ImportPreview('markdown', [
+    Entry(
+      id: newId(),
+      created: e.created,
+      updated: e.updated,
+      title: e.title,
+      body: e.body,
+      tags: e.tags,
+      mood: e.mood,
+    ),
+  ]);
 }
 
 Entry? _parseDiaryBlock(String block) {

@@ -13,8 +13,9 @@ import 'vault.dart';
 
 /// Encrypted files on disk, the same layout as the encrypted git mirror:
 ///
-///   vault.json, settings.enc, tombstones.enc, sync.enc (device only)
+///   vault.json, settings.enc, tombstones.enc, sync.enc, trash.enc (device only)
 ///   `entries/<id>.md.enc`, `media/<id>.enc`, `thumbs/<id>.enc`
+///   `trash/...`: deleted entries with their media, same names, kept [trashDays] days (device only)
 ///
 /// All entries are decrypted into memory on unlock; media stays encrypted until opened.
 class EntryStore {
@@ -28,6 +29,10 @@ class EntryStore {
 
   final Map<String, Entry> _entries = {};
   final Map<String, DateTime> _tombstones = {};
+  final Map<String, (Entry, DateTime)> _trash = {};
+
+  /// How long deleted entries stay in the trash.
+  static const trashDays = 30;
   final Map<String, Uint8List> _thumbCache = {};
   final Map<String, File> _openCache = {};
 
@@ -112,13 +117,14 @@ class EntryStore {
       final d = DateTime.tryParse('$v');
       if (d != null) _tombstones[k] = d;
     });
+    await _loadTrash();
   }
 
   Future<Entry?> _readEntryFile(File f) async {
     final id = f.uri.pathSegments.last.replaceAll('.md.enc', '');
     try {
       final clear = await box.decrypt(await f.readAsBytes(), context: 'entries/$id');
-      return entryFromMarkdown(utf8.decode(clear), fallbackId: id);
+      return entryFromMarkdown(utf8.decode(clear), forceId: id);
     } on DecryptionException {
       return null; // a damaged file must not lock the user out of the rest
     }
@@ -174,16 +180,116 @@ class EntryStore {
     await _indexChanged(e.id);
   }
 
-  /// Deletes the entry, its media, and remembers a tombstone so sync deletes it elsewhere.
-  Future<void> delete(String id) async {
+  /// Deletes the entry with its media and remembers a tombstone. With [toTrash] the files move to
+  /// `trash/` and can be restored for [trashDays] days; sync sees a deletion either way.
+  Future<void> delete(String id, {bool toTrash = true}) async {
     final e = _entries.remove(id);
-    await _deleteIfExists(entryPath(id));
-    await _indexChanged(id);
-    for (final a in e?.attachments ?? const <Attachment>[]) {
-      await deleteMedia(a.id);
+    // A conflict copy shares attachments with its original: media still used by a live entry
+    // stays where it is.
+    final atts = [
+      for (final a in e?.attachments ?? const <Attachment>[])
+        if (!_usedByLive(a.id)) a,
+    ];
+    if (toTrash && e != null) {
+      await _move(entryPath(id), 'trash/${entryPath(id)}');
+      for (final a in atts) {
+        await _move(mediaPath(a.id), 'trash/${mediaPath(a.id)}');
+        await _move(thumbPath(a.id), 'trash/${thumbPath(a.id)}');
+        await _forgetMedia(a.id);
+      }
+      _trash[id] = (e, DateTime.now());
+      await _writeTrash();
+    } else {
+      await _deleteIfExists(entryPath(id));
+      for (final a in atts) {
+        await deleteMedia(a.id);
+      }
     }
+    await _indexChanged(id);
     _tombstones[id] = DateTime.now();
     await writeJson('tombstones', {for (final t in _tombstones.entries) t.key: t.value.toIso8601String()});
+  }
+
+  // ---- trash -------------------------------------------------------------------------------
+
+  /// Deleted entries with the time of deletion, most recent first.
+  List<(Entry, DateTime)> get trash => _trash.values.toList()..sort((a, b) => b.$2.compareTo(a.$2));
+
+  Future<void> _loadTrash() async {
+    _trash.clear();
+    final j = await readJson('trash');
+    final items = (j?['items'] as Map?) ?? const {};
+    final expired = <String>[];
+    final limit = DateTime.now().subtract(const Duration(days: trashDays));
+    items.forEach((id, v) {
+      if (v is! Map || !isSafeId('$id')) return;
+      final at = DateTime.tryParse('${v['d']}');
+      try {
+        final e = Entry.fromJson(v['e'] as Map);
+        _trash['$id'] = (e, at ?? limit);
+        if (at == null || at.isBefore(limit)) expired.add('$id');
+      } catch (_) {
+        // a broken record is skipped; its files go with the next "empty trash"
+      }
+    });
+    for (final id in expired) {
+      await purge(id);
+    }
+  }
+
+  Future<void> _writeTrash() => writeJson('trash', {
+    'v': 1,
+    'items': {
+      for (final t in _trash.entries) t.key: {'d': t.value.$2.toIso8601String(), 'e': t.value.$1.toJson()},
+    },
+  });
+
+  /// Brings an entry back from the trash. Returns it, or null if it is not there.
+  Future<Entry?> restore(String id) async {
+    final item = _trash[id];
+    if (item == null) return null;
+    if (_entries.containsKey(id)) {
+      // Sync brought another copy back meanwhile: that one stays, the trashed one goes.
+      await purge(id);
+      return _entries[id];
+    }
+    _trash.remove(id);
+    final saved = item.$1;
+    await _move('trash/${entryPath(id)}', entryPath(id));
+    for (final a in saved.attachments) {
+      await _move('trash/${mediaPath(a.id)}', mediaPath(a.id));
+      await _move('trash/${thumbPath(a.id)}', thumbPath(a.id));
+    }
+    final f = file(entryPath(id));
+    final e = (await f.exists() ? await _readEntryFile(f) : null) ?? saved;
+    if (!await f.exists()) await save(e, touch: false);
+    _entries[id] = e;
+    await _indexChanged(id);
+    _tombstones.remove(id);
+    await writeJson('tombstones', {for (final t in _tombstones.entries) t.key: t.value.toIso8601String()});
+    await _writeTrash();
+    return e;
+  }
+
+  /// Deletes a trashed entry for good.
+  Future<void> purge(String id) async {
+    final item = _trash.remove(id);
+    await _deleteIfExists('trash/${entryPath(id)}');
+    for (final a in item?.$1.attachments ?? const <Attachment>[]) {
+      if (_usedByLive(a.id) || _trash.values.any((t) => t.$1.attachments.any((x) => x.id == a.id))) continue;
+      await _deleteIfExists('trash/${mediaPath(a.id)}');
+      await _deleteIfExists('trash/${thumbPath(a.id)}');
+    }
+    await _writeTrash();
+  }
+
+  bool _usedByLive(String mediaId) => _entries.values.any((e) => e.attachments.any((a) => a.id == mediaId));
+
+  Future<void> emptyTrash() async {
+    _trash.clear();
+    final dir = Directory('${root.path}/trash');
+    if (await dir.exists()) await dir.delete(recursive: true);
+    await _writeTrash();
   }
 
   /// Applies a tombstone received from sync.
@@ -245,6 +351,11 @@ class EntryStore {
   Future<void> deleteMedia(String id) async {
     await _deleteIfExists(mediaPath(id));
     await _deleteIfExists(thumbPath(id));
+    await _forgetMedia(id);
+  }
+
+  /// Drops cached thumbnails and decrypted copies of a media file.
+  Future<void> _forgetMedia(String id) async {
     _thumbCache.remove(id);
     final open = _openCache.remove(id);
     if (open != null && await open.exists()) await open.delete();
@@ -329,6 +440,15 @@ class EntryStore {
   Future<void> _writeEncrypted(String relPath, List<int> clear) async {
     final blob = await box.encrypt(clear, context: contextFor(relPath));
     await _atomicWrite(file(relPath), blob);
+  }
+
+  Future<void> _move(String from, String to) async {
+    final f = file(from);
+    if (!await f.exists()) return;
+    final target = file(to);
+    await target.parent.create(recursive: true);
+    if (await target.exists()) await target.delete();
+    await f.rename(target.path);
   }
 
   Future<void> _deleteIfExists(String relPath) async {

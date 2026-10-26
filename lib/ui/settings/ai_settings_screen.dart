@@ -6,6 +6,13 @@ import '../../l10n/strings.dart';
 import '../../services/ai_tagger.dart';
 import '../../state/app_state.dart';
 
+/// User-facing text for an AI error.
+String aiErrorText(AiException e) => switch (e.message) {
+  'no_key' => tr('ai_not_configured'),
+  'https_only' => tr('ai_https_only'),
+  _ => e.message,
+};
+
 class AiSettingsScreen extends StatefulWidget {
   const AiSettingsScreen({super.key});
 
@@ -23,12 +30,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   bool _testing = false;
   String? _result;
 
-  AiConfig get _config => _app.ai.copyWith(
-    baseUrl: _url.text.trim().isEmpty ? AiConfig.defaultBaseUrl : _url.text.trim(),
-    apiKey: _key.text.trim(),
-    model: _model.text.trim().isEmpty ? AiConfig.defaultModel : _model.text.trim(),
-    autoTag: _auto,
-  );
+  AiConfig get _config {
+    final next = _app.ai.copyWith(
+      baseUrl: _url.text.trim().isEmpty ? AiConfig.defaultBaseUrl : _url.text.trim(),
+      apiKey: _key.text.trim(),
+      model: _model.text.trim().isEmpty ? AiConfig.defaultModel : _model.text.trim(),
+      autoTag: _auto,
+    );
+    // Consent covers one provider: a new host asks again before any entry text goes there.
+    return next.host == _app.ai.host ? next : next.copyWith(consented: false);
+  }
 
   Future<void> _save() async {
     _app.ai = _config;
@@ -42,13 +53,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     });
     try {
       final sample = Entry.create()
-        ..body = Lang.code == 'ru'
-            ? 'Сегодня гуляли с женой у моря, обсуждали имя для дочери. Вечером немного поработал над игрой.'
-            : 'Walked by the sea with my wife today and talked about a name for our daughter. Worked on my game in the evening.';
+        ..body = tr('ai_test_sample');
       final tags = await AiTagger(_config).suggest(sample, const []);
       _result = tr('ai_ok', {'tags': tags.map((t) => '#$t').join(' ')});
     } on AiException catch (e) {
-      _result = tr('ai_error', {'error': e.message == 'no_key' ? tr('ai_not_configured') : e.message});
+      _result = tr('ai_error', {'error': aiErrorText(e)});
     }
     if (mounted) setState(() => _testing = false);
   }

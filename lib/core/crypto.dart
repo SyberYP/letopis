@@ -219,7 +219,13 @@ class KdfParams {
 
   factory KdfParams.fromJson(Map<String, dynamic> j) {
     if (j['alg'] != 'argon2id') throw FormatException('unknown kdf ${j['alg']}');
-    return KdfParams(memoryKiB: j['m'] as int, iterations: j['t'] as int, parallelism: j['p'] as int);
+    final m = j['m'], t = j['t'], p = j['p'];
+    // vault.json can come from a shared repository: refuse values that would exhaust memory or
+    // hang the phone (a hostile file), and ones Argon2 can't run with.
+    if (m is! int || t is! int || p is! int || p < 1 || p > 16 || m < 8 * p || m > 1 << 21 || t < 1 || t > 64) {
+      throw const FormatException('bad kdf parameters');
+    }
+    return KdfParams(memoryKiB: m, iterations: t, parallelism: p);
   }
 }
 

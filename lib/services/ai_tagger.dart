@@ -28,6 +28,9 @@ class AiConfig {
 
   bool get isConfigured => apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
 
+  /// Host that receives entry text; consent is given per host.
+  String get host => Uri.tryParse(baseUrl.trim())?.host ?? baseUrl;
+
   AiConfig copyWith({String? baseUrl, String? apiKey, String? model, bool? autoTag, bool? consented}) => AiConfig(
     baseUrl: baseUrl ?? this.baseUrl,
     apiKey: apiKey ?? this.apiKey,
@@ -57,6 +60,8 @@ class AiConfig {
 
 class AiException implements Exception {
   AiException(this.message);
+
+  /// `no_key`, `https_only` or a provider / network message.
   final String message;
   @override
   String toString() => message;
@@ -101,7 +106,9 @@ class AiTagger {
 
   Future<List<String>> suggest(Entry entry, List<String> knownTags) async {
     if (!config.isConfigured) throw AiException('no_key');
-    final uri = Uri.parse('${config.baseUrl.replaceAll(RegExp(r'/+$'), '')}/chat/completions');
+    final uri = Uri.tryParse('${config.baseUrl.trim().replaceAll(RegExp(r'/+$'), '')}/chat/completions');
+    // The key and the diary text must never travel in clear text.
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) throw AiException('https_only');
     final http.Response res;
     try {
       res = await _client

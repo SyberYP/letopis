@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,6 +30,7 @@ class Prefs {
     this.autoLockSeconds = 60,
     this.biometric = false,
     this.secureScreen = true,
+    this.tiles = false,
   });
 
   ThemeModeSetting themeMode;
@@ -37,6 +39,9 @@ class Prefs {
   int autoLockSeconds;
   bool biometric;
   bool secureScreen;
+
+  /// Timeline as a grid of tiles instead of a list of cards.
+  bool tiles;
 
   static Future<Prefs> load() async {
     final p = await SharedPreferences.getInstance();
@@ -47,6 +52,7 @@ class Prefs {
       autoLockSeconds: p.getInt('autolock') ?? 60,
       biometric: p.getBool('biometric') ?? false,
       secureScreen: p.getBool('secure') ?? true,
+      tiles: p.getBool('tiles') ?? false,
     );
   }
 
@@ -63,6 +69,7 @@ class Prefs {
     await p.setInt('autolock', autoLockSeconds);
     await p.setBool('biometric', biometric);
     await p.setBool('secure', secureScreen);
+    await p.setBool('tiles', tiles);
   }
 }
 
@@ -116,6 +123,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final KdfParams kdf;
 
   late Prefs prefs;
+
+  /// App version for the About section, e.g. `1.1.0 (3)`.
+  String version = '';
   late Directory root;
   late Directory temp;
   bool ready = false;
@@ -137,6 +147,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> init({Prefs? withPrefs, Directory? dataDir, Directory? tempDir}) async {
     prefs = withPrefs ?? await Prefs.load();
+    try {
+      final info = await PackageInfo.fromPlatform();
+      version = '${info.version} (${info.buildNumber})';
+    } catch (_) {
+      // tests and unsupported platforms
+    }
     Lang.code = prefs.language;
     root = dataDir ?? await platform.dataDir();
     temp = tempDir ?? await platform.tempDir();
@@ -279,6 +295,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     final s = store;
     if (s == null) return;
+    // A stuck disk must not keep the diary open: wait a little, then lock anyway.
+    await Future.wait(List.of(_writes)).timeout(const Duration(seconds: 5), onTimeout: () => const []);
     try {
       await s.flushIndex();
     } catch (_) {
@@ -338,23 +356,44 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   List<Entry> get entries => store?.entries ?? const [];
 
-  Future<void> saveEntry(Entry e) async {
-    await store!.save(e);
-    _changed();
+  /// Store writes still running; [lock] waits for them so the key is never wiped mid-write.
+  final Set<Future<void>> _writes = {};
+
+  /// True while an entry is being written.
+  bool get busy => _writes.isNotEmpty;
+
+  Future<T> _write<T>(Future<T> Function(EntryStore s) op) async {
+    final s = store;
+    if (s == null) throw StateError('vault is locked');
+    final f = op(s);
+    final done = f.then<void>((_) {}, onError: (_) {});
+    _writes.add(done);
+    try {
+      final r = await f;
+      _changed();
+      return r;
+    } finally {
+      _writes.remove(done);
+    }
   }
 
-  Future<void> deleteEntry(String id) async {
-    await store!.delete(id);
-    _changed();
-  }
+  Future<void> saveEntry(Entry e) => _write((s) => s.save(e));
+
+  /// Moves an entry to the trash ([toTrash] false deletes it for good, e.g. an emptied draft).
+  Future<void> deleteEntry(String id, {bool toTrash = true}) => _write((s) => s.delete(id, toTrash: toTrash));
+
+  Future<Entry?> restoreEntry(String id) => _write((s) => s.restore(id));
+
+  Future<void> purgeEntry(String id) => _write((s) => s.purge(id));
+
+  Future<void> emptyTrash() => _write((s) => s.emptyTrash());
 
   /// Saves several entries (import) with one notification.
-  Future<void> saveAll(Iterable<Entry> list) async {
+  Future<void> saveAll(Iterable<Entry> list) => _write((s) async {
     for (final e in list) {
-      await store!.save(e, touch: false);
+      await s.save(e, touch: false);
     }
-    _changed();
-  }
+  });
 
   void _changed() {
     _revision++;
@@ -441,7 +480,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return report;
     } on SyncException catch (e) {
       syncStatus = SyncStatus.error;
-      syncMessage = e.code == 'other_vault' ? tr('sync_other_vault') : tr('sync_error', {'error': e.detail});
+      syncMessage = switch (e.code) {
+        'other_vault' => tr('sync_other_vault'),
+        'public_repo' => tr('sync_public_repo'),
+        _ => tr('sync_error', {'error': e.detail}),
+      };
       notifyListeners();
       rethrow;
     } catch (e) {

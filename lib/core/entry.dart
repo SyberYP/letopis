@@ -3,6 +3,12 @@ import 'package:uuid/uuid.dart';
 const _uuid = Uuid();
 String newId() => _uuid.v4();
 
+final _safeId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
+
+/// Ids become file names (`entries/<id>.md.enc`), so anything read from outside (import, sync,
+/// front matter) must pass this check: no slashes, dots or other path tricks.
+bool isSafeId(String? id) => id != null && _safeId.hasMatch(id);
+
 enum AttachmentType {
   photo,
   video,
@@ -39,9 +45,14 @@ class Attachment {
   final int size;
   final int? durationMs;
 
+  /// File extension for decrypted copies and plain exports: letters and digits only, so a
+  /// crafted name can't add path segments.
   String get extension {
     final dot = name.lastIndexOf('.');
-    if (dot > 0 && dot < name.length - 1) return name.substring(dot + 1).toLowerCase();
+    if (dot > 0 && dot < name.length - 1) {
+      final ext = name.substring(dot + 1).toLowerCase();
+      if (RegExp(r'^[a-z0-9]{1,10}$').hasMatch(ext)) return ext;
+    }
     return switch (mime) {
       'image/jpeg' => 'jpg',
       'image/png' => 'png',
@@ -139,7 +150,10 @@ class Entry {
     title: (j['t'] as String?) ?? '',
     body: (j['b'] as String?) ?? '',
     tags: [for (final t in (j['g'] as List?) ?? const []) '$t'],
-    attachments: [for (final a in (j['a'] as List?) ?? const []) Attachment.fromJson(a as Map)],
+    attachments: [
+      for (final a in (j['a'] as List?) ?? const [])
+        if (a is Map && isSafeId('${a['id']}')) Attachment.fromJson(a),
+    ],
     mood: j['m'] as int?,
   );
 

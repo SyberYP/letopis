@@ -13,10 +13,14 @@ import '../../state/app_state.dart';
 import '../lock_screen.dart';
 import '../theme.dart';
 import '../widgets/entry_card.dart';
+import '../widgets/markdown_view.dart';
 import 'ai_settings_screen.dart';
 import 'git_settings_screen.dart';
+import 'stats_screen.dart';
+import 'trash_screen.dart';
 
-const appVersion = '0.1.0';
+/// Privacy policy, also linked from the store listings.
+const privacyUrl = 'https://letopis.recalltwin.com/privacy';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -171,14 +175,34 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.insights_rounded),
             title: Text(tr('stats_title')),
-            onTap: () => _stats(context),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StatsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_outline_rounded),
+            title: Text(tr('trash')),
+            subtitle: Text(plural('entries', app.store?.trash.length ?? 0)),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TrashScreen())),
           ),
           _Section(tr('about')),
           ListTile(
             leading: const Icon(Icons.info_outline_rounded),
-            title: Text('${tr('app_name')} $appVersion'),
-            subtitle: Text(tr('about_body', {'version': appVersion})),
-            isThreeLine: true,
+            title: Text('${tr('app_name')} ${app.version}'),
+            subtitle: Text(tr('about_body')),
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: Text(tr('privacy_policy')),
+            trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+            onTap: () => openExternalLink(context, privacyUrl),
+          ),
+          ListTile(
+            leading: const Icon(Icons.gavel_rounded),
+            title: Text(tr('licenses')),
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: tr('app_name'),
+              applicationVersion: app.version,
+            ),
           ),
         ],
       ),
@@ -302,24 +326,6 @@ class SettingsScreen extends StatelessWidget {
     await app.keepUnlocked(() => SharePlus.instance.share(ShareParams(files: [XFile(file.path)])));
   }
 
-  void _stats(BuildContext context) {
-    final app = context.read<AppState>();
-    final entries = app.entries;
-    final days = {for (final e in entries) DateUtils.dateOnly(e.created)}.length;
-    final words = entries.fold<int>(0, (n, e) => n + e.wordCount);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.insights_rounded),
-        title: Text(tr('stats_title')),
-        content: Text(
-          tr('stats_body', {'entries': entries.length, 'words': words, 'days': days, 'streak': app.streak}),
-          style: const TextStyle(height: 1.6),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('close')))],
-      ),
-    );
-  }
 }
 
 class _Section extends StatelessWidget {

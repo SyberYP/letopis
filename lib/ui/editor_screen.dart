@@ -11,6 +11,7 @@ import '../l10n/strings.dart';
 import '../services/ai_tagger.dart';
 import '../state/app_state.dart';
 import 'entry_screen.dart';
+import 'settings/ai_settings_screen.dart';
 import 'theme.dart';
 import 'widgets/attachments.dart';
 import 'widgets/entry_card.dart';
@@ -84,7 +85,7 @@ class _EditorScreenState extends State<EditorScreen> {
     if (!_dirty || !_app.unlocked) return;
     _dirty = false;
     if (_e.isEmpty) {
-      if (_saved) await _app.deleteEntry(_e.id);
+      if (_saved) await _app.deleteEntry(_e.id, toTrash: false);
       _saved = false;
       return;
     }
@@ -293,7 +294,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final ai = _app.ai;
     if (!ai.isConfigured) return _snack(tr('ai_not_configured'));
     if (!ai.consented) {
-      final host = Uri.tryParse(ai.baseUrl)?.host ?? ai.baseUrl;
+      final host = ai.host;
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -317,7 +318,7 @@ class _EditorScreenState extends State<EditorScreen> {
       setState(() => _suggestions = tags);
       if (tags.isEmpty) _snack(tr('ai_no_new'));
     } on AiException catch (e) {
-      _snack(tr('ai_error', {'error': e.message == 'no_key' ? tr('ai_not_configured') : e.message}));
+      _snack(tr('ai_error', {'error': aiErrorText(e)}));
     } finally {
       if (mounted) setState(() => _suggesting = false);
     }
@@ -347,8 +348,10 @@ class _EditorScreenState extends State<EditorScreen> {
     if (!await confirmDeleteEntry(context) || !mounted) return;
     _debounce?.cancel();
     _dirty = false;
+    final messenger = ScaffoldMessenger.of(context);
     if (_saved) {
       await _app.deleteEntry(_e.id);
+      showTrashedSnack(messenger, _app, _e.id);
     } else {
       for (final a in _e.attachments) {
         await _app.store?.deleteMedia(a.id);
@@ -417,6 +420,13 @@ class _EditorScreenState extends State<EditorScreen> {
                         ],
                       ),
                     ),
+                  ),
+                  _MoodPicker(
+                    value: _e.mood,
+                    onChanged: (m) {
+                      _e.mood = m;
+                      _touch();
+                    },
                   ),
                   TextField(
                     controller: _title,
@@ -520,6 +530,46 @@ class _EditorScreenState extends State<EditorScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Optional mood 1–5; tapping the chosen one clears it.
+class _MoodPicker extends StatelessWidget {
+  const _MoodPicker({required this.value, required this.onChanged});
+  final int? value;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Text(tr('mood'), style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+        const SizedBox(width: 6),
+        for (var m = 1; m <= 5; m++)
+          Semantics(
+            label: tr('mood_$m'),
+            selected: value == m,
+            button: true,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => onChanged(value == m ? null : m),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: value == m ? cs.secondaryContainer : Colors.transparent,
+                ),
+                child: Opacity(
+                  opacity: value == null || value == m ? 1 : 0.35,
+                  child: Text(moodEmoji(m), style: const TextStyle(fontSize: 20)),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

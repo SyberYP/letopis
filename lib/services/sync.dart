@@ -11,7 +11,8 @@ import 'git_remote.dart';
 class SyncException implements Exception {
   SyncException(this.code, [this.detail = '']);
 
-  /// `other_vault`: the repo holds a different diary; `remote`: host error.
+  /// `other_vault`: the repo holds a different diary (or a key file that doesn't open this one);
+  /// `public_repo`: plain mirror into a public repository; `remote`: host error.
   final String code;
   final String detail;
   @override
@@ -109,18 +110,31 @@ class SyncEngine {
     final report = SyncReport();
     final state = await _loadState();
     final snap = await remote.snapshot();
+    // Only files this app writes: a repository is shared space, and a path like
+    // `settings.enc` or `../x.enc` must never reach the local folder.
     final remoteFiles = <String, String>{
       for (final e in snap.files.entries)
-        if (e.key.startsWith(_prefix)) e.key.substring(_prefix.length): e.value,
+        if (e.key.startsWith(_prefix) && isSyncPath(e.key.substring(_prefix.length)))
+          e.key.substring(_prefix.length): e.value,
     };
 
     // The remote must hold this diary or nothing yet.
     final localVault = await File('${store.root.path}/vault.json').readAsBytes();
     final remoteVaultSha = remoteFiles['vault.json'];
     if (remoteVaultSha != null && remoteVaultSha != gitBlobSha(localVault)) {
-      final theirs = VaultFile.decode(utf8.decode(await remote.readBlob(remoteVaultSha)));
+      final VaultFile theirs;
+      try {
+        theirs = VaultFile.decode(utf8.decode(await remote.readBlob(remoteVaultSha)));
+      } on FormatException {
+        throw SyncException('other_vault');
+      }
       final mine = VaultFile.decode(utf8.decode(localVault));
       if (theirs.id != mine.id) throw SyncException('other_vault');
+      // A changed key file (new password on another device) must still wrap this diary's key;
+      // otherwise taking it would lock the user out of their own entries.
+      final probe = await theirs.unlockWithKey(store.box.keyBytes);
+      if (probe == null) throw SyncException('other_vault');
+      probe.wipe();
     }
 
     final local = await _localHashes(state);
@@ -130,7 +144,7 @@ class SyncEngine {
       ...local.keys,
       ...remoteFiles.keys,
       ...state.base.keys,
-    }.where((p) => p.endsWith('.enc') || p == 'vault.json').toSet();
+    }.where(isSyncPath).toSet();
 
     for (final path in paths) {
       final l = local[path], r = remoteFiles[path], b = state.base[path];
@@ -297,6 +311,11 @@ class SyncEngine {
     return bytes;
   };
 
+  static final _syncPath = RegExp(r'^(vault\.json|entries/[A-Za-z0-9_-]{1,64}\.md\.enc|(media|thumbs)/[A-Za-z0-9_-]{1,64}\.enc)$');
+
+  /// Paths the encrypted sync may read or write (relative to the diary folder).
+  static bool isSyncPath(String p) => _syncPath.hasMatch(p);
+
   static String? _entryId(String path) {
     final m = RegExp(r'^entries/([^/]+)\.md\.enc$').firstMatch(path);
     return m?.group(1);
@@ -368,6 +387,9 @@ class SyncEngine {
   }
 
   Future<SyncReport> _mirror() async {
+    // Plain Markdown in a public repository would publish the diary: refuse every time, the
+    // repository may have been made public after it was connected.
+    if (!await remote.isPrivate()) throw SyncException('public_repo');
     final report = SyncReport();
     final state = await _loadState();
     final snap = await remote.snapshot();

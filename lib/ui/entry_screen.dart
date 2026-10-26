@@ -20,8 +20,11 @@ class EntryScreen extends StatelessWidget {
   Future<void> _delete(BuildContext context) async {
     final ok = await confirmDeleteEntry(context);
     if (!ok || !context.mounted) return;
-    await context.read<AppState>().deleteEntry(entryId);
+    final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    await app.deleteEntry(entryId);
     if (context.mounted) Navigator.of(context).pop();
+    showTrashedSnack(messenger, app, entryId);
   }
 
   void _tag(BuildContext context, String tag) {
@@ -106,6 +109,16 @@ class EntryScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Moved to trash · Undo" after a deletion.
+void showTrashedSnack(ScaffoldMessengerState messenger, AppState app, String id) {
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(tr('moved_to_trash')),
+      action: SnackBarAction(label: tr('undo'), onPressed: () => app.restoreEntry(id)),
+    ),
+  );
 }
 
 Future<bool> confirmDeleteEntry(BuildContext context) async {

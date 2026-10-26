@@ -70,15 +70,7 @@ class EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    var preview = entry.preview.trim();
-    final rawTitle = entry.displayTitle;
-    if (entry.title.trim().isEmpty && preview.startsWith(rawTitle)) {
-      preview = preview.substring(rawTitle.length).trim();
-    }
-    // Hashtags are shown as chips below, so they are dropped from the title and preview.
-    String noTags(String s) => s.replaceAll(_hashtagInText, '').replaceAll(RegExp(r'[ \t]{2,}'), ' ').trim();
-    final title = noTags(rawTitle);
-    preview = noTags(preview);
+    final (title, preview) = cardTexts(entry);
     final photos = entry.attachments.where((a) => a.type == AttachmentType.photo).toList();
     final others = entry.attachments.where((a) => a.type != AttachmentType.photo).toList();
     final tags = entry.allTags;
@@ -179,6 +171,18 @@ class EntryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Title and preview for cards and tiles: the first line becomes the title when there is none,
+/// and hashtags are dropped (they are shown as chips).
+(String, String) cardTexts(Entry entry) {
+  var preview = entry.preview.trim();
+  final rawTitle = entry.displayTitle;
+  if (entry.title.trim().isEmpty && preview.startsWith(rawTitle)) {
+    preview = preview.substring(rawTitle.length).trim();
+  }
+  String noTags(String s) => s.replaceAll(_hashtagInText, '').replaceAll(RegExp(r'[ \t]{2,}'), ' ').trim();
+  return (noTags(rawTitle), noTags(preview));
 }
 
 final _hashtagInText = RegExp(r'(?<![\p{L}\p{N}_&/#])#[\p{L}\p{N}_][\p{L}\p{N}_\-]*', unicode: true);
