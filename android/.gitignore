@@ -12,6 +12,3 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
-# Personal-build key (public password "android"): keeps updates installable over each other.
-# Never used for store releases — those use the upload key from key.properties (kept outside git).
-!app/letopis-dev.jks

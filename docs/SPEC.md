@@ -193,9 +193,10 @@ sync.enc                   состояние синхронизации (SHA ф
 `local_auth`, `image_picker`, `file_picker`, `record`, `just_audio`, `video_player`,
 `flutter_markdown_plus`, `http`, `archive`, `share_plus`, `provider`.
 
-Сборка только локально (GitHub Actions не используется): `flutter test`, `flutter build apk --release`
-(личный ключ, выкладывается на letopis.recalltwin.com), `flutter build appbundle --release` (ключ
-загрузки для сторов из `android/key.properties`, вне git).
+Сборка только локально (GitHub Actions не используется): `flutter test`, `flutter build apk --release`,
+`flutter build appbundle --release`. Подпись — ключ загрузки из `android/key.properties` (вне git);
+для сайта APK дополнительно подписывается с ротацией со старого личного ключа (`deploy/sign-site.sh`).
+Код — GPL-3.0.
 
 ## 6. Не входит в MVP
 Веб-версия и ПК; совместное ведение; напоминания; геолокация и погода; распознавание речи

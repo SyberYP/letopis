@@ -6,18 +6,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Two keys:
-// - personal builds (`flutter build apk`) use the dev key in the repo, so updates install over each other;
-// - store builds (`flutter build appbundle`, or any build with LETOPIS_STORE=1) use the upload key from
-//   android/key.properties, which lives outside git. A store build without it fails instead of falling back.
+// Release builds are signed with the upload key from android/key.properties (kept outside git):
+// the same key for the site APK, RuStore and the Play upload. Without it a release build fails.
+// The old personal key (letopis-dev.jks, public password) is retired: deploy/sign-site.sh adds a
+// rotation proof, so phones with the old build update without reinstalling. Debug builds use the
+// standard Android debug key.
 val keyProps = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
-val storeBuild = System.getenv("LETOPIS_STORE") == "1" ||
-    gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
-if (storeBuild && keyProps.isEmpty) {
-    throw GradleException("Store build needs android/key.properties with the upload key (see README, Signing)")
+val releaseBuild = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+if (releaseBuild && keyProps.isEmpty) {
+    throw GradleException("Release build needs android/key.properties with the upload key (see README, Signing)")
 }
 
 android {
@@ -45,14 +45,8 @@ android {
     }
 
     signingConfigs {
-        create("dev") {
-            storeFile = file("letopis-dev.jks")
-            storePassword = "android"
-            keyAlias = "letopis"
-            keyPassword = "android"
-        }
-        if (storeBuild) {
-            create("store") {
+        if (!keyProps.isEmpty) {
+            create("upload") {
                 storeFile = file(keyProps.getProperty("storeFile"))
                 storePassword = keyProps.getProperty("storePassword")
                 keyAlias = keyProps.getProperty("keyAlias")
@@ -62,11 +56,8 @@ android {
     }
 
     buildTypes {
-        debug {
-            signingConfig = signingConfigs.getByName("dev")
-        }
         release {
-            signingConfig = signingConfigs.getByName(if (storeBuild) "store" else "dev")
+            if (!keyProps.isEmpty) signingConfig = signingConfigs.getByName("upload")
         }
     }
 }

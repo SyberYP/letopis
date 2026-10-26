@@ -13,6 +13,8 @@
 - Пакет: `com.bylinsky.letopis`. Версия 1.1.0 (versionCode 2). minSdk 24, targetSdk 36.
 - Категория: «Образ жизни» (Google Play: Lifestyle; RuStore: «Образ жизни» или «Продуктивность»).
 - Цена: бесплатно, без рекламы, без встроенных покупок.
+- Почта для связи (карточка, политика, SECURITY.md): sybberr@gmail.com.
+- Разработчик: Александр Былинский (Alexander Bylinsky).
 - Ключ загрузки: `~/.letopis/letopis-upload.jks`, alias `upload`.
   SHA-256 сертификата: `99:97:A4:16:64:F1:54:0A:66:92:92:DD:F2:09:E9:5C:73:A6:C4:E7:70:8A:F5:4E:11:98:F4:2A:7D:0C:1E:25`.
 
@@ -122,7 +124,8 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 
 - Регистрация через VK ID, разработчик — физлицо/самозанятый/ИП (уточнить актуальные условия в
   консоли: по публикациям 2026 года платёжные инструменты — только ИП и юрлица, нам они не нужны).
-- Загружается тот же AAB или APK, подписанный ключом загрузки (`LETOPIS_STORE=1 flutter build apk --release`).
+- Загружается AAB или APK из `flutter build apk --release` (подписан ключом загрузки). Версия с сайта
+  подписана тем же ключом — установки из RuStore и с сайта обновляют друг друга.
 - Модерация — до нескольких дней. Те же тексты, иконка 512, скриншоты.
 
 ## Google Play — порядок
@@ -139,6 +142,6 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 flutter analyze && flutter test
 # в pubspec.yaml поднять version: X.Y.Z+N (N всегда растёт)
 flutter build appbundle --release        # для сторов
-flutter build apk --release && deploy/deploy.sh   # для сайта (личный ключ)
+flutter build apk --release && deploy/deploy.sh   # для сайта (+ ротация с личного ключа)
 SCREENSHOTS=1 flutter test test/ui/screenshots_test.dart --update-goldens   # если менялся интерфейс
 ```
