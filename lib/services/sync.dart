@@ -81,7 +81,7 @@ class SyncEngine {
 
   final EntryStore store;
   final RemoteRepo remote;
-  final GitHubConfig config;
+  final SyncConfig config;
   final String device;
 
   String get _prefix => config.dir.isEmpty ? '' : '${config.dir.replaceAll(RegExp(r'^/+|/+$'), '')}/';

@@ -76,7 +76,24 @@ abstract class RemoteRepo {
   });
 }
 
-class GitHubConfig {
+/// Where the diary syncs to: a GitHub repository or a cloud folder.
+abstract class SyncConfig {
+  /// Folder inside the repository or cloud; empty for the root.
+  String get dir;
+
+  /// Identifies the target; sync state resets when it changes.
+  String get key;
+
+  /// Plain Markdown mirror (push only) instead of the encrypted two-way sync.
+  bool get plain;
+  bool get autoSync;
+  bool get isConfigured;
+
+  /// Short name for the settings screen.
+  String get label;
+}
+
+class GitHubConfig implements SyncConfig {
   const GitHubConfig({
     this.owner = '',
     this.repo = '',
@@ -93,15 +110,22 @@ class GitHubConfig {
   final String branch;
 
   /// Folder inside the repo; empty for the root.
+  @override
   final String dir;
   final String token;
 
   /// Plain Markdown mirror (push only) instead of the encrypted two-way sync.
+  @override
   final bool plain;
+  @override
   final bool autoSync;
   final String apiBase;
 
+  @override
   bool get isConfigured => owner.isNotEmpty && repo.isNotEmpty && token.isNotEmpty;
+  @override
+  String get label => '$owner/$repo';
+  @override
   String get key => '$owner/$repo@$branch/$dir/${plain ? 'plain' : 'enc'}';
 
   GitHubConfig copyWith({

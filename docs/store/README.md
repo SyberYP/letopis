@@ -49,16 +49,17 @@
 • Шифрование AES-256-GCM, ключ из пароля через Argon2id.
 • Разблокировка отпечатком, автоблокировка, запрет скриншотов.
 • Корзина: удалённую запись можно вернуть в течение 30 дней.
-• Резервная копия и второй телефон — через ваш собственный репозиторий GitHub, записи уходят туда
-  зашифрованными.
+• Резервная копия и второй телефон — через ваше облако (Яндекс Диск, Облако Mail.ru, Nextcloud — по
+  WebDAV) или репозиторий GitHub; записи уходят туда зашифрованными.
+• Экспорт в PDF — книга для чтения и печати: год или одна запись, с фотографиями.
 • Экспорт всего дневника в ZIP с обычными Markdown-файлами.
 • Импорт старого дневника из текстовой выгрузки и MyDiary.
 
 Важно: пароль нельзя восстановить. Если вы его забудете, записи не откроет никто — ни вы, ни мы.
 
-**Что нового в 1.1.0**:
-Режим плиток в ленте, корзина на 30 дней с отменой удаления, настроение, статистика, «Поделиться»
-вложением, улучшения безопасности.
+**Что нового в 1.3.0**:
+Синхронизация и восстановление через ваше облако (Яндекс Диск, Облако Mail.ru, Nextcloud — по WebDAV),
+экспорт в PDF — весь дневник, год или одна запись, с фотографиями.
 
 ## Store listing — English
 
@@ -89,7 +90,9 @@ Your data is yours
 • AES-256-GCM encryption, key derived from your password with Argon2id.
 • Fingerprint unlock, auto-lock, screenshot blocking.
 • Trash: bring back a deleted entry within 30 days.
-• Backup and a second phone through your own GitHub repository; entries are uploaded encrypted.
+• Backup and a second phone through your own cloud (Yandex Disk, Mail.ru Cloud, Nextcloud — over WebDAV)
+  or GitHub repository; entries are uploaded encrypted.
+• Export to PDF: a book to read and print, a year or one entry, with photos.
 • Export the whole diary as a ZIP of plain Markdown files.
 
 Note: the password cannot be recovered. If you forget it, nobody can open the entries — not you, not us.
@@ -98,14 +101,16 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 
 - По определению Google «сбор» — любая передача данных с устройства приложением, даже на аккаунт самого
   пользователя. Поэтому честный ответ — **Yes, collects** (только по желанию пользователя):
-  - *Personal info → Other info*: текст записей (синхронизация GitHub, подбор тегов ИИ).
+  - *Personal info → Other info*: текст записей (синхронизация с облаком или GitHub — в зашифрованном
+    виде; подбор тегов ИИ).
   - *Photos and videos → Photos, Videos*; *Audio → Voice or sound recordings*; *Files and docs*
-    (только синхронизация GitHub).
+    (только синхронизация с облаком или GitHub).
   - Для каждого: **optional** (пользователь включает сам), purpose — **App functionality**,
     **not shared** (передача по действию пользователя на его собственный сервис — исключение из «sharing»),
     не обрабатывается эфемерно.
   - Разработчик эти данные не получает — это стоит написать в описании.
-- **Is all data encrypted in transit?** — Yes (HTTPS only).
+- **Is all data encrypted in transit?** — Yes: HTTPS. Исключение — сервер WebDAV в домашней сети по HTTP
+  (выбор пользователя, файлы дневника при этом зашифрованы). Перед Google Play решить, оставлять ли его.
 - **Can users request data deletion?** — Данные только на устройстве: удаление записи / приложения.
   Учётных записей нет.
 

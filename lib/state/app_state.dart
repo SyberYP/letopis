@@ -20,6 +20,7 @@ import '../l10n/strings.dart';
 import '../services/ai_tagger.dart';
 import '../services/git_remote.dart';
 import '../services/sync.dart';
+import '../services/webdav_remote.dart';
 
 /// Settings that must work before unlock (theme, language, lock behaviour). Not secret.
 class Prefs {
@@ -137,6 +138,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   EntryStore? store;
   AiConfig ai = const AiConfig();
   GitHubConfig git = const GitHubConfig();
+  WebDavConfig dav = const WebDavConfig();
+
+  /// One sync target at a time: the cloud folder if connected, otherwise GitHub.
+  SyncConfig? get syncTarget => dav.isConfigured ? dav : (git.isConfigured ? git : null);
+
+  static RemoteRepo remoteFor(SyncConfig c) => c is WebDavConfig ? WebDavRepo(c) : GitHubRepo(c as GitHubConfig);
 
   bool get hasVault => vault != null;
   bool get unlocked => store != null;
@@ -278,6 +285,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     final settings = await s.readJson('settings');
     ai = AiConfig.fromJson(settings?['ai'] as Map<String, dynamic>?);
     git = GitHubConfig.fromJson(settings?['git'] as Map<String, dynamic>?);
+    dav = WebDavConfig.fromJson(settings?['dav'] as Map<String, dynamic>?);
     store = s;
     _revision++;
     notifyListeners();
@@ -311,12 +319,16 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     s.box.wipe();
     ai = const AiConfig();
     git = const GitHubConfig();
+    dav = const WebDavConfig();
     notifyListeners();
   }
 
   /// Replaces the local diary with one restored from GitHub.
-  Future<String?> restoreFromGit(GitHubConfig config, String password) async {
-    final repo = GitHubRepo(config);
+  Future<String?> restoreFromGit(GitHubConfig config, String password) => restore(config, password);
+
+  /// Replaces the local diary with one restored from GitHub or a cloud folder.
+  Future<String?> restore(SyncConfig config, String password) async {
+    final repo = remoteFor(config);
     final snap = await repo.snapshot();
     final prefix = config.dir.isEmpty ? '' : '${config.dir}/';
     final sha = snap.files['${prefix}vault.json'];
@@ -331,7 +343,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     await EntryStore.writeVault(root, v);
     vault = v;
     await _open(box);
-    git = config;
+    if (config is WebDavConfig) {
+      dav = config;
+    } else {
+      git = config as GitHubConfig;
+    }
     await saveSettings();
     try {
       await syncNow();
@@ -344,7 +360,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   // ---- settings ----------------------------------------------------------------------------
 
   Future<void> saveSettings() async {
-    await store?.writeJson('settings', {'ai': ai.toJson(), 'git': git.toJson()});
+    await store?.writeJson('settings', {'ai': ai.toJson(), 'git': git.toJson(), 'dav': dav.toJson()});
     notifyListeners();
   }
 
@@ -457,7 +473,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _syncTimer;
 
   void _scheduleAutoSync() {
-    if (!git.isConfigured || !git.autoSync) return;
+    final t = syncTarget;
+    if (t == null || !t.autoSync) return;
     _syncTimer?.cancel();
     _syncTimer = Timer(const Duration(seconds: 20), () => syncNow());
   }
@@ -465,14 +482,15 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   /// Runs a sync; returns the report or throws [SyncException].
   Future<SyncReport?> syncNow() async {
     final s = store;
-    if (s == null || !git.isConfigured || syncStatus == SyncStatus.running) return null;
+    final target = syncTarget;
+    if (s == null || target == null || syncStatus == SyncStatus.running) return null;
     syncStatus = SyncStatus.running;
     notifyListeners();
     try {
       final report = await SyncEngine(
         store: s,
-        remote: GitHubRepo(git),
-        config: git,
+        remote: remoteFor(target),
+        config: target,
         device: platform.deviceName,
       ).run();
       if (report.vaultChanged) vault = await EntryStore.readVault(root);

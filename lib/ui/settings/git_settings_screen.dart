@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/strings.dart';
 import '../../services/git_remote.dart';
+import '../../services/webdav_remote.dart';
 import '../../state/app_state.dart';
 import '../home_screen.dart';
 import '../lock_screen.dart';
 import '../widgets/entry_card.dart';
+import 'cloud_settings_screen.dart';
 
 /// Repository, branch, folder and token fields, shared by settings and restore.
 class _GitForm extends StatefulWidget {
@@ -169,6 +171,8 @@ class _GitSettingsScreenState extends State<GitSettingsScreen> {
   Future<void> _save() async {
     if (_config.key != _app.git.key || _config.token != _app.git.token || _config.autoSync != _app.git.autoSync) {
       _app.git = _config;
+      // One sync target at a time: connecting GitHub switches the cloud off.
+      if (_config.isConfigured && _app.dav.isConfigured) _app.dav = const WebDavConfig();
       await _app.saveSettings();
     }
   }
@@ -203,6 +207,19 @@ class _GitSettingsScreenState extends State<GitSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (app.dav.isConfigured) ...[
+            Card(
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  tr('git_replaces_dav', {'name': app.dav.label}),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           _GitForm(initial: _config, onChanged: (c) => setState(() => _config = c)),
           const SizedBox(height: 16),
           Row(
@@ -262,6 +279,8 @@ class RestoreScreen extends StatefulWidget {
 
 class _RestoreScreenState extends State<RestoreScreen> {
   GitHubConfig _config = const GitHubConfig(autoSync: true);
+  WebDavConfig _cloud = const WebDavConfig(autoSync: true);
+  bool _fromCloud = false;
   final _pw = TextEditingController();
   String? _error;
   bool _busy = false;
@@ -274,7 +293,9 @@ class _RestoreScreenState extends State<RestoreScreen> {
     final app = context.read<AppState>();
     final nav = Navigator.of(context);
     try {
-      final err = await app.restoreFromGit(_config.copyWith(plain: false), _pw.text);
+      final err = _fromCloud
+          ? await app.restore(_cloud, _pw.text)
+          : await app.restoreFromGit(_config.copyWith(plain: false), _pw.text);
       if (err != null) {
         setState(() => _error = tr(err));
       } else {
@@ -282,7 +303,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
         return;
       }
     } catch (e) {
-      setState(() => _error = tr('error', {'error': e}));
+      setState(() => _error = cloudError(e));
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -295,8 +316,23 @@ class _RestoreScreenState extends State<RestoreScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Text(tr('restore_body')),
+          const SizedBox(height: 16),
+          SegmentedButton<bool>(
+            segments: [
+              const ButtonSegment(value: false, label: Text('GitHub'), icon: Icon(Icons.code_rounded)),
+              ButtonSegment(value: true, label: Text(tr('dav_short')), icon: const Icon(Icons.cloud_outlined)),
+            ],
+            selected: {_fromCloud},
+            onSelectionChanged: (s) => setState(() {
+              _fromCloud = s.first;
+              _error = null;
+            }),
+          ),
           const SizedBox(height: 20),
-          _GitForm(initial: _config, showMode: false, onChanged: (c) => _config = c),
+          if (_fromCloud)
+            CloudForm(initial: _cloud, showAuto: false, onChanged: (c) => _cloud = c)
+          else
+            _GitForm(initial: _config, showMode: false, onChanged: (c) => _config = c),
           const SizedBox(height: 16),
           PasswordField(controller: _pw, label: tr('password'), error: _error),
           const SizedBox(height: 20),

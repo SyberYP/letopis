@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -10,8 +12,21 @@ import 'ui/theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  _registerFontLicenses();
   final app = AppState()..init();
   runApp(LetopisApp(state: app));
+}
+
+/// The PDF fonts (SIL OFL 1.1) show up in "Licenses" next to the packages.
+void _registerFontLicenses() {
+  LicenseRegistry.addLicense(() async* {
+    for (final (name, file) in const [
+      ('PT Serif', 'OFL-PTSerif.txt'),
+      ('Noto Emoji', 'OFL-NotoEmoji.txt'),
+    ]) {
+      yield LicenseEntryWithLineBreaks([name], await rootBundle.loadString('assets/fonts/$file'));
+    }
+  });
 }
 
 class LetopisApp extends StatelessWidget {

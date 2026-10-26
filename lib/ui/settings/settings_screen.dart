@@ -19,7 +19,9 @@ import '../theme.dart';
 import '../widgets/entry_card.dart';
 import '../widgets/markdown_view.dart';
 import 'ai_settings_screen.dart';
+import 'cloud_settings_screen.dart';
 import 'git_settings_screen.dart';
+import 'pdf_export_flow.dart';
 import 'stats_screen.dart';
 import 'trash_screen.dart';
 
@@ -151,9 +153,16 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiSettingsScreen())),
           ),
-          _Section(tr('git_section')),
+          _Section(tr('sync_section')),
           ListTile(
             leading: const Icon(Icons.cloud_sync_outlined),
+            title: Text(tr('dav_title')),
+            subtitle: Text(app.dav.isConfigured ? '${app.dav.label} · ${app.dav.dir}' : tr('dav_sub_off')),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CloudSettingsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.code_rounded),
             title: Text(tr('git_section')),
             subtitle: Text(
               app.git.isConfigured
@@ -169,6 +178,12 @@ class SettingsScreen extends StatelessWidget {
             title: Text(tr('import')),
             subtitle: Text(tr('import_sub')),
             onTap: () => _import(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: Text(tr('pdf')),
+            subtitle: Text(tr('pdf_sub')),
+            onTap: () => exportPdfFlow(context),
           ),
           ListTile(
             leading: const Icon(Icons.archive_outlined),

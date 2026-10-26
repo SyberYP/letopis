@@ -43,13 +43,19 @@
 </ul>
 
 <h2>Что хранится на устройстве</h2>
-<p>Записи, теги, вложения (фото, видео, голос, файлы), настройки, токен GitHub и ключ API нейросети.
+<p>Записи, теги, вложения (фото, видео, голос, файлы), настройки, логин и пароль приложения для облака,
+tокен GitHub и ключ API нейросети.
 Всё зашифровано AES-256-GCM ключом, который выводится из вашего пароля (Argon2id). Пароль никуда не
 отправляется. Если вы его забудете, восстановить данные нельзя — ни вам, ни разработчику.
 Если включена разблокировка по отпечатку, ключ хранится в защищённом хранилище Android.</p>
 
 <h2>Когда данные уходят в сеть</h2>
 <ul>
+  <li><b>Синхронизация с облаком</b> (выключена, пока вы её не настроите). Зашифрованные файлы дневника
+    отправляются в папку облака, которое выбрали вы (Яндекс Диск, Облако Mail.ru, Nextcloud или другой
+    сервер WebDAV), с вашим логином и паролем приложения. Текст записей облако не видит. Обработку данных
+    на его стороне описывает политика выбранного сервиса. Соединение — HTTPS; обычный HTTP разрешён только
+    для сервера в вашей домашней сети.</li>
   <li><b>Синхронизация с GitHub</b> (выключена, пока вы её не настроите). Записи отправляются в ваш
     репозиторий с вашим токеном. В обычном режиме — в зашифрованном виде. В режиме «открытый Markdown»
     — открытым текстом, и только в приватный репозиторий. Обработку данных на стороне GitHub описывает
@@ -58,6 +64,8 @@
     текст одной записи (без вложений) отправляется выбранному вами сервису (например, OpenRouter) после
     вашего согласия. Данные обрабатываются по правилам этого сервиса.</li>
   <li><b>Ссылки в записях</b> открываются в браузере только после подтверждения.</li>
+  <li><b>Экспорт в PDF и ZIP</b> создаётся на устройстве и не зашифрован. Файл уходит только туда, куда вы
+    сами его отправите через «Поделиться»; временная копия удаляется при блокировке дневника.</li>
   <li><b>Поддержка автора</b> (по желанию). В версии с сайта кнопка «Поддержать» открывает страницу
     CloudTips в браузере. В версии из RuStore платёж проходит через платёжный модуль RuStore: он
     включается только когда вы открываете «Поддержать», и обрабатывает платёж по
@@ -72,7 +80,7 @@
 <ul>
   <li><b>Микрофон</b> — запись голосовых заметок, только когда вы нажали «Голос».</li>
   <li><b>Биометрия</b> — разблокировка дневника отпечатком или лицом, по желанию.</li>
-  <li><b>Интернет</b> — только для синхронизации и нейросети, описанных выше.</li>
+  <li><b>Интернет</b> — только для синхронизации, нейросети и проверки обновлений, описанных выше.</li>
   <li>Фото и видео с камеры снимает системное приложение камеры; доступа к камере у «Летописи» нет.</li>
 </ul>
 
@@ -107,13 +115,18 @@ where you send it: your own GitHub repository or an AI service you connected.</p
 </ul>
 
 <h2>What is stored on the device</h2>
-<p>Entries, tags, attachments (photos, video, voice, files), settings, your GitHub token and AI API key.
+<p>Entries, tags, attachments (photos, video, voice, files), settings, your cloud login and app password,
+your GitHub token and AI API key.
 Everything is encrypted with AES-256-GCM under a key derived from your password (Argon2id). The password
 is never sent anywhere. If you forget it, the data cannot be recovered by you or by the developer.
 With fingerprint unlock enabled, the key is kept in Android's secure storage.</p>
 
 <h2>When data leaves the device</h2>
 <ul>
+  <li><b>Cloud sync</b> (off until you set it up). The encrypted diary files are sent to a folder in the
+    cloud you chose (Yandex Disk, Mail.ru Cloud, Nextcloud or another WebDAV server) with your login and app
+    password. The cloud never sees the text of entries; its own handling of data is covered by that service's
+    policy. The connection is HTTPS; plain HTTP is allowed only for a server in your home network.</li>
   <li><b>GitHub sync</b> (off until you set it up). Entries are sent to your repository with your token.
     By default they stay encrypted. In "plain Markdown" mode they are sent as plain text, and only to a
     private repository. GitHub's handling is covered by the
@@ -122,6 +135,8 @@ With fingerprint unlock enabled, the key is kept in Android's secure storage.</p
     of one entry (no attachments) is sent to the service you chose (e.g. OpenRouter), after your consent,
     and is handled under that service's terms.</li>
   <li><b>Links in entries</b> open in the browser only after you confirm.</li>
+  <li><b>PDF and ZIP exports</b> are made on the device and are not encrypted. A file goes only where you send
+    it with "Share"; the temporary copy is deleted when the diary locks.</li>
   <li><b>Supporting the author</b> (optional). In the site version the "Support" button opens a CloudTips page
     in the browser. In the RuStore version the payment goes through the RuStore payment module: it starts
     only when you open "Support", and handles the payment under
@@ -136,7 +151,7 @@ With fingerprint unlock enabled, the key is kept in Android's secure storage.</p
 <ul>
   <li><b>Microphone</b> — voice notes, only when you tap "Voice".</li>
   <li><b>Biometrics</b> — optional fingerprint or face unlock.</li>
-  <li><b>Internet</b> — only for the sync and AI features above.</li>
+  <li><b>Internet</b> — only for the sync, AI and update check features above.</li>
   <li>Camera photos and videos are taken by the system camera app; Letopis has no camera access.</li>
 </ul>
 

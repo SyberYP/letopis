@@ -8,16 +8,18 @@
 |---|---|
 | Someone gets the app's files (a backup, root, a stolen phone without the password) | Everything is encrypted with AES-256-GCM. The data key (DEK) is wrapped with a key derived from the password (Argon2id, 19 MiB, 2 passes). Without the password the files are useless |
 | Encrypted files swapped or moved around | The file path (`entries/<id>`, `media/<id>`…) is part of every chunk's AAD: a file moved under another name will not decrypt |
+| A cloud folder changed by someone else, or two phones syncing at once | Cloud files are stored under their blob id and checked on download; an index is written last and only if nobody changed the folder meanwhile, otherwise the sync starts over |
+| The cloud password on the wire | WebDAV only over HTTPS; plain HTTP is accepted only for home-network addresses (a NAS). The login and app password live in the encrypted settings |
 | A foreign or corrupted sync repository | Only paths like `vault.json`, `entries/<id>.md.enc`, `media|thumbs/<id>.enc` are taken. A `vault.json` from the repository is accepted only if the current key opens it |
 | An imported file with traps in an id or attachment name (`../`) | Ids are checked (`[A-Za-z0-9_-]{1,64}`), extensions too (`[a-z0-9]{1,10}`); imported entries get a new id and no foreign attachments |
 | A `vault.json` with huge Argon2id parameters (hang, out of memory) | Parameters are capped: memory ≤ 2 GiB, passes ≤ 64, threads ≤ 16 |
 | Plaintext leaking into a public repository | The "open Markdown" mode checks that the repository is private and sends nothing otherwise |
-| Entry text leaking over the network | Network access is limited to GitHub (the user's token) and the chosen AI service (HTTPS only, after consent; consent resets when the address changes). Links from entries open only after confirmation |
+| Entry text leaking over the network | Network access is limited to the user's cloud (encrypted files only), GitHub (the user's token) and the chosen AI service (HTTPS only, after consent; consent resets when the address changes). Links from entries open only after confirmation |
 | A forged update | Every build is signed with an upload key kept outside the repository. The old personal key with a public password was retired by signature rotation (v3) without rollback rights: an APK signed with it will not install over version 1.1.1+ |
 | Shoulder surfing | Auto-lock when the app goes to the background; optional screenshot blocking (`FLAG_SECURE`) |
 
-Plaintext reaches the disk only in the temporary folder for video/audio playback and when sharing
-(a temporary file); the folder is wiped on lock.
+Plaintext reaches the disk only in the temporary folder for video/audio playback, when sharing and for
+the PDF and ZIP exports (temporary files); the folder is wiped on lock.
 
 ## Known limitations
 

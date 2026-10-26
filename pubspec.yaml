@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.2.0+5
+version: 1.3.0+6
 
 environment:
   sdk: ^3.13.7
@@ -61,6 +61,7 @@ dependencies:
   url_launcher: ^6.3.3
   package_info_plus: ^10.2.2
   flutter_rustore_pay: ^11.1.1
+  pdf: ^3.13.1
 
 dev_dependencies:
   flutter_test:
@@ -83,6 +84,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # PDF export: PT Serif (Cyrillic) and Noto Emoji, both SIL OFL 1.1 (licenses next to the files).
+  assets:
+    - assets/fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

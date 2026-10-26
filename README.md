@@ -37,7 +37,9 @@ yours.
 - The app goes online only when you ask it to: GitHub sync, AI tags, update check.
 
 **Your data, your way**
-- Optional sync through your own private GitHub repository: encrypted, both ways, across devices.
+- Optional sync through your own cloud — Yandex Disk, Mail.ru Cloud, Nextcloud or any WebDAV server — or a
+  private GitHub repository: encrypted, both ways, across devices.
+- Export to PDF: a book to read or print, with dates, formatting and photos; a whole year or one entry.
 - Import from a text diary export, MyDiary or `.md` files; export everything to ZIP.
 - English and Russian, light and dark themes, six accent colours.
 
@@ -80,8 +82,8 @@ with the same key, so you can switch between them.
 |---|---|
 | **Encryption** | Argon2id turns your password into a key that unwraps a random data key; files are AES-256-GCM in 1 MiB chunks |
 | **On the phone** | Entries, attachments, thumbnails, settings and the search index are all encrypted |
-| **Sync** | The same encrypted files go to *your* private GitHub repository; GitHub never sees the text |
-| **Network** | Only GitHub, the AI service you chose (HTTPS only, after consent) and the update check, each only on your action |
+| **Sync** | The same encrypted files go to *your* cloud folder or private GitHub repository; neither sees the text |
+| **Network** | Only your cloud or GitHub, the AI service you chose (HTTPS only, after consent) and the update check, each only on your action |
 | **Updates** | Every build is signed with a key kept outside this repository |
 
 Threat model and known limitations: [SECURITY.md](SECURITY.md).

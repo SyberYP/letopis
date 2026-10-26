@@ -89,7 +89,7 @@ Future<void> openEntry(BuildContext context, Entry entry, {ValueChanged<String>?
 List<Widget> commonActions(BuildContext context) {
   final app = context.watch<AppState>();
   return [
-    if (app.git.isConfigured)
+    if (app.syncTarget != null)
       IconButton(
         tooltip: tr('sync_now'),
         onPressed: app.syncStatus == SyncStatus.running ? null : () => runSync(context),

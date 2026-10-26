@@ -6,6 +6,7 @@ import '../core/entry.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import 'home_screen.dart';
+import 'settings/pdf_export_flow.dart';
 import 'theme.dart';
 import 'widgets/attachments.dart';
 import 'widgets/entry_card.dart';
@@ -49,12 +50,24 @@ class EntryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             tooltip: tr('share'),
             icon: const Icon(Icons.ios_share_rounded),
-            onPressed: () => SharePlus.instance.share(
-              ShareParams(text: [if (e.title.isNotEmpty) e.title, e.body].join('\n\n'), subject: e.displayTitle),
-            ),
+            onSelected: (v) => v == 'pdf'
+                ? exportPdfFlow(context, only: [e])
+                : SharePlus.instance.share(
+                    ShareParams(text: [if (e.title.isNotEmpty) e.title, e.body].join('\n\n'), subject: e.displayTitle),
+                  ),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'text',
+                child: ListTile(leading: const Icon(Icons.notes_rounded), title: Text(tr('share_text'))),
+              ),
+              PopupMenuItem(
+                value: 'pdf',
+                child: ListTile(leading: const Icon(Icons.picture_as_pdf_outlined), title: Text(tr('share_pdf'))),
+              ),
+            ],
           ),
           IconButton(
             tooltip: tr('delete'),
