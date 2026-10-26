@@ -60,6 +60,8 @@ Future<void> loadFonts() async {
     '/usr/share/fonts/truetype/noto/NotoSerif-SemiBold.ttf',
     '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
     '/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf',
+    'C:/Windows/Fonts/georgia.ttf',
+    'C:/Windows/Fonts/georgiab.ttf',
   ]);
 }
 

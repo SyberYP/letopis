@@ -8,13 +8,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:letopis/core/entry.dart';
+import 'package:letopis/l10n/strings.dart';
 import 'package:letopis/main.dart';
 import 'package:letopis/state/app_state.dart';
 import 'package:letopis/ui/calendar_view.dart';
 import 'package:letopis/ui/editor_screen.dart';
 import 'package:letopis/ui/entry_screen.dart';
 import 'package:letopis/ui/settings/settings_screen.dart';
+import 'package:letopis/ui/settings/stats_screen.dart';
 import 'package:letopis/ui/tags_view.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'harness.dart';
 
@@ -62,6 +66,7 @@ Future<AppState> seeded({ThemeModeSetting theme = ThemeModeSetting.light, String
       ..body =
           'Проснулся раньше будильника и пошёл к морю. Вода спокойная, почти никого. '
           'Думал о том, как изменится жизнь через пару недель.\n\n> Главное — не торопиться.\n\n#утро #море'
+      ..mood = 4
       ..attachments.addAll([await photo(1), await photo(2)]),
     Entry.create(at: d(0, 21, 40))
       ..title = 'План на неделю'
@@ -97,6 +102,7 @@ Future<void> shot(WidgetTester tester, String name) async {
 
 void main() {
   setUpAll(loadFonts);
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   void phone(WidgetTester tester) {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -109,6 +115,10 @@ void main() {
     final app = (await tester.runAsync(seeded))!;
     await tester.pumpWidget(LetopisApp(state: app));
     await shot(tester, '1-timeline');
+    await tester.tap(find.byTooltip(tr('view_tiles')));
+    await shot(tester, '10-tiles');
+    await tester.tap(find.byTooltip(tr('view_list')));
+    await tester.pumpAndSettle();
 
     final first = app.entries.first;
     final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
@@ -142,6 +152,11 @@ void main() {
 
     nav.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     await shot(tester, '6-settings');
+    nav.pop();
+    await tester.pumpAndSettle();
+
+    nav.push(MaterialPageRoute(builder: (_) => const StatsScreen()));
+    await shot(tester, '11-stats');
     nav.pop();
     await tester.pumpAndSettle();
 
