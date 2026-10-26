@@ -1,0 +1,13 @@
+<!-- Not a RuStore build: the RuStore Pay SDK (pulled in by the plugin for all builds) stays out of the
+     manifest, so none of its components can start. The Dart side never calls it in this build. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <application>
+        <activity android:name="ru.rustore.sdk.pay.internal.presentation.ui.PayActivity" tools:node="remove" />
+        <provider android:name="ru.rustore.sdk.pay.RuStorePayContentProvider" tools:node="remove" />
+        <provider android:name="ru.rustore.sdk.imaging.ImageLoaderContentProvider" tools:node="remove" />
+        <service android:name="ru.rustore.sdk.metrics.internal.presentation.SendMetricsEventJobService" tools:node="remove" />
+        <meta-data android:name="internal_config_key" tools:node="remove" />
+    </application>
+</manifest>

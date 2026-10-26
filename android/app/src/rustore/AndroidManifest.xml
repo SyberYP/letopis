@@ -1,0 +1,15 @@
+<!-- RuStore build only: RuStore Pay needs the console app id and a return scheme for bank apps. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/SDK_PAY_SCHEME" />
+            </intent-filter>
+        </activity>
+        <meta-data android:name="console_app_id_value" android:value="@string/CONSOLE_APPLICATION_ID" />
+        <meta-data android:name="sdk_pay_scheme_value" android:value="@string/SDK_PAY_SCHEME" />
+    </application>
+</manifest>

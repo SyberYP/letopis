@@ -3,11 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-/// Where this build came from. The download-site APK is built with
-/// `--dart-define=LETOPIS_CHANNEL=site`; store builds leave it empty and never check for updates
-/// themselves (the store does that, and store rules forbid updating around it).
-/// Not `const` so tests can switch it.
-bool siteBuild = const String.fromEnvironment('LETOPIS_CHANNEL') == 'site';
+/// Only the download-site build (`siteBuild`, see channel.dart) checks for updates; store builds
+/// are updated by the store, and store rules forbid updating around it.
 
 const siteUrl = 'https://letopis.recalltwin.com/';
 const versionUrl = '${siteUrl}version.json';

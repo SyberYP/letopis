@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build the download-site APK (with the "Check for updates" button), re-sign it with the key
 # rotation proof and upload it with the download page, version.json and the privacy policy.
-# Usage: deploy/deploy.sh            builds with --dart-define=LETOPIS_CHANNEL=site
-#        deploy/deploy.sh some.apk   uploads a ready APK (must be built with that define)
-# Store builds are separate: `flutter build apk|appbundle --release` without the define.
+# Usage: deploy/deploy.sh            builds the `site` flavor
+#        deploy/deploy.sh some.apk   uploads a ready APK (must be the site flavor)
+# Store builds are separate flavors: --flavor rustore / --flavor play.
 # Env: LETOPIS_HOST (default root@85.137.88.33), LETOPIS_DIR (default /var/www/letopis).
 set -euo pipefail
 
@@ -13,8 +13,8 @@ HOST="${LETOPIS_HOST:-root@85.137.88.33}"
 DIR="${LETOPIS_DIR:-/var/www/letopis}"
 
 if [ -z "$APK" ]; then
-  flutter build apk --release --dart-define=LETOPIS_CHANNEL=site
-  APK=build/app/outputs/flutter-apk/app-release.apk
+  flutter build apk --release --flavor site
+  APK=build/app/outputs/flutter-apk/app-site-release.apk
 fi
 [ -f "$APK" ] || { echo "APK not found: $APK"; exit 1; }
 

@@ -9,7 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/strings.dart';
 import '../../services/exporter.dart';
+import '../../services/channel.dart';
 import '../../services/importer.dart';
+import '../../services/support.dart';
 import '../../services/update_check.dart';
 import '../../state/app_state.dart';
 import '../lock_screen.dart';
@@ -191,6 +193,13 @@ class SettingsScreen extends StatelessWidget {
             title: Text('${tr('app_name')} ${app.version}'),
             subtitle: Text(tr('about_body')),
           ),
+          if (siteBuild || rustoreBuild)
+            ListTile(
+              leading: Icon(Icons.favorite_rounded, color: Theme.of(context).colorScheme.primary),
+              title: Text(tr('support')),
+              subtitle: Text(tr('support_sub')),
+              onTap: () => siteBuild ? _supportOnSite(context) : _supportInRuStore(context),
+            ),
           if (siteBuild) const _UpdateTile(),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
@@ -404,4 +413,137 @@ class _UpdateTileState extends State<_UpdateTile> {
     trailing: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
     onTap: _busy ? null : _check,
   );
+}
+
+/// Site build: the author's CloudTips page, after saying where it leads.
+Future<void> _supportOnSite(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.favorite_rounded),
+      title: Text(tr('support')),
+      content: Text(tr('support_site_body')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('support_open'))),
+      ],
+    ),
+  );
+  if (go != true) return;
+  try {
+    if (!await launchUrl(Uri.parse(supportUrl), mode: LaunchMode.externalApplication)) {
+      messenger.showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+    }
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+  }
+}
+
+/// RuStore build: a one-off payment through RuStore.
+Future<void> _supportInRuStore(BuildContext context) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  builder: (_) => const RuStoreSupportSheet(),
+);
+
+/// Public for tests.
+class RuStoreSupportSheet extends StatefulWidget {
+  const RuStoreSupportSheet({super.key});
+
+  @override
+  State<RuStoreSupportSheet> createState() => _RuStoreSupportSheetState();
+}
+
+class _RuStoreSupportSheetState extends State<RuStoreSupportSheet> {
+  List<SupportOption>? _options;
+  String? _error;
+  bool _paying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _error = null;
+      _options = null;
+    });
+    try {
+      final list = await supportStore.options();
+      if (mounted) setState(() => _options = list);
+    } on SupportException catch (e) {
+      if (mounted) setState(() => _error = e.code);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'failed');
+    }
+  }
+
+  Future<void> _pay(SupportOption o) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    setState(() => _paying = true);
+    try {
+      final r = await supportStore.pay(o.id, dark: dark);
+      if (r == SupportResult.thanks) {
+        nav.pop();
+        messenger.showSnackBar(SnackBar(content: Text(tr('support_thanks'))));
+        return;
+      }
+    } on SupportException catch (e) {
+      if (mounted) setState(() => _error = e.code);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'failed');
+    }
+    if (mounted) setState(() => _paying = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(tr('support'), style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(tr('support_store_body'), style: TextStyle(color: cs.onSurfaceVariant)),
+            const SizedBox(height: 20),
+            if (_error != null) ...[
+              Text(tr('support_err_$_error'), style: TextStyle(color: cs.error)),
+              const SizedBox(height: 12),
+              if (_error == 'unauthorized')
+                FilledButton(
+                  onPressed: () async {
+                    try {
+                      await supportStore.signIn();
+                    } catch (_) {}
+                    _load();
+                  },
+                  child: Text(tr('support_sign_in')),
+                )
+              else
+                OutlinedButton(onPressed: _load, child: Text(tr('support_retry'))),
+            ] else if (_options == null || _paying)
+              const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+            else
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final o in _options!) FilledButton.tonal(onPressed: () => _pay(o), child: Text(o.price)),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

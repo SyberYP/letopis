@@ -12,7 +12,7 @@
 
 - Пакет: `com.bylinsky.letopis`. Версия 1.1.0 (versionCode 2). minSdk 24, targetSdk 36.
 - Категория: «Образ жизни» (Google Play: Lifestyle; RuStore: «Образ жизни» или «Продуктивность»).
-- Цена: бесплатно, без рекламы, без встроенных покупок.
+- Цена: бесплатно, без рекламы. Встроенные покупки (RuStore) — только добровольная поддержка автора, ничего не открывают.
 - Почта для связи (карточка, политика, SECURITY.md): sybberr@gmail.com.
 - Разработчик: Александр Былинский (Alexander Bylinsky).
 - Ключ загрузки: `~/.letopis/letopis-upload.jks`, alias `upload`.
@@ -124,8 +124,15 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 
 - Регистрация через VK ID, разработчик — физлицо/самозанятый/ИП (уточнить актуальные условия в
   консоли: по публикациям 2026 года платёжные инструменты — только ИП и юрлица, нам они не нужны).
-- Загружается AAB или APK из `flutter build apk --release` (подписан ключом загрузки). Версия с сайта
-  подписана тем же ключом — установки из RuStore и с сайта обновляют друг друга.
+- Загружается AAB или APK flavor `rustore`: `flutter build appbundle --release --flavor rustore`
+  (подписан ключом загрузки). Версия с сайта подписана тем же ключом — установки обновляют друг друга.
+- **Поддержка автора (разовые покупки):** после подключения монетизации (ИП + заявление с УКЭП в консоли)
+  создать три товара типа «потребляемый»: `support_99` (99 ₽, «Спасибо»), `support_299` (299 ₽, «Большое
+  спасибо»), `support_999` (999 ₽, «Огромное спасибо»). Id приложения из адреса консоли
+  (`apps/<id>/versions`) вписать в `android/gradle.properties` → `letopisRustoreAppId` и пересобрать.
+  До этого кнопка в RuStore-версии честно пишет «Оплата через RuStore пока недоступна».
+- В описании для RuStore: «Все функции бесплатны. Можно поддержать автора разовым платежом — он ничего
+  не открывает».
 - Модерация — до нескольких дней. Те же тексты, иконка 512, скриншоты.
 
 ## Google Play — порядок
@@ -141,7 +148,7 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 ```bash
 flutter analyze && flutter test
 # в pubspec.yaml поднять version: X.Y.Z+N (N всегда растёт)
-deploy/deploy.sh                          # сайт: своя сборка с кнопкой обновлений + version.json
-flutter build appbundle --release        # сторы — ПОСЛЕ deploy.sh (без LETOPIS_CHANNEL, кнопки нет)
+deploy/deploy.sh                                   # сайт: flavor site + version.json
+flutter build appbundle --release --flavor rustore   # RuStore
 SCREENSHOTS=1 flutter test test/ui/screenshots_test.dart --update-goldens   # если менялся интерфейс
 ```

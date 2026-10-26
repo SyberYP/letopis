@@ -16,6 +16,7 @@ val keyProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 val releaseBuild = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+val rustoreAppId = (project.findProperty("letopisRustoreAppId") as String?)?.trim().orEmpty()
 if (releaseBuild && keyProps.isEmpty) {
     throw GradleException("Release build needs android/key.properties with the upload key (see README, Signing)")
 }
@@ -24,6 +25,8 @@ android {
     namespace = "com.bylinsky.letopis"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    buildFeatures { resValues = true }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -42,6 +45,21 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // Distribution channels (Dart reads the flavor as `appFlavor`, see lib/services/channel.dart).
+    // Same applicationId and key: site and RuStore installs update each other.
+    flavorDimensions += "channel"
+    productFlavors {
+        create("site") { dimension = "channel" }
+        create("rustore") {
+            dimension = "channel"
+            // RuStore Pay: app id from the RuStore Console URL (apps/<id>/versions); empty until the
+            // app exists there — then the support button says payments are not available yet.
+            resValue("string", "CONSOLE_APPLICATION_ID", rustoreAppId)
+            resValue("string", "SDK_PAY_SCHEME", "letopispay")
+        }
+        create("play") { dimension = "channel" }
     }
 
     signingConfigs {
