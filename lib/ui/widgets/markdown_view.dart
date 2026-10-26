@@ -42,7 +42,7 @@ class EntryMarkdown extends StatelessWidget {
       a: TextStyle(color: cs.primary, fontWeight: FontWeight.w600, decoration: TextDecoration.none),
       blockquote: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant, fontStyle: FontStyle.italic),
       blockquoteDecoration: BoxDecoration(
-        border: Border(left: BorderSide(color: cs.primary, width: 3)),
+        border: BorderDirectional(start: BorderSide(color: cs.primary, width: 3)),
         color: cs.primaryContainer.withValues(alpha: 0.25),
       ),
       blockquotePadding: const EdgeInsets.fromLTRB(14, 8, 8, 8),

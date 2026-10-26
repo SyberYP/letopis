@@ -10,6 +10,7 @@ import '../../core/entry.dart';
 import '../../l10n/strings.dart';
 import '../../services/pdf_export.dart';
 import '../../state/app_state.dart';
+import '../theme.dart';
 import '../widgets/entry_card.dart';
 
 /// Settings → Export to PDF: pick the period and whether to include photos, then share the file.
@@ -108,22 +109,17 @@ Future<void> exportPdfFlow(BuildContext context, {List<Entry>? only}) async {
   File? file;
   Object? error;
   try {
-    Future<Uint8List> font(String name) async => (await rootBundle.load('assets/fonts/$name')).buffer.asUint8List();
-    final fonts = PdfFonts(
-      regular: await font('PT_Serif-Web-Regular.ttf'),
-      bold: await font('PT_Serif-Web-Bold.ttf'),
-      italic: await font('PT_Serif-Web-Italic.ttf'),
-      emoji: await font('NotoEmoji.ttf'),
-    );
+    // Labels in the UI language when the bundled fonts can draw it, otherwise in English.
+    final lang = _pdfLabelLanguages.contains(Lang.code) ? Lang.code : 'en';
     final prepared = await preparePdfEntries(
       store,
       entries,
       photos: photos,
       text: PdfText(
-        month: fmtMonthYear,
-        date: (t) => '${fmtFullDate(t)} · ${fmtTime(t)}',
-        mood: (m) => '${tr('mood')}: ${tr('mood_$m').toLowerCase()}',
-        attachment: _attachmentLine,
+        month: (t) => fmtMonthYear(t, lang),
+        date: (t) => '${fmtFullDate(t, lang)} · ${fmtTime(t, lang)}',
+        mood: (m) => '${trIn(lang, 'mood')}: ${trIn(lang, 'mood_$m').toLowerCase()}',
+        attachment: (a) => _attachmentLine(a, lang),
       ),
       onProgress: (done, total) => progress.value = (done, total),
     );
@@ -131,7 +127,7 @@ Future<void> exportPdfFlow(BuildContext context, {List<Entry>? only}) async {
     final last = prepared.isEmpty ? DateTime.now() : entries.map((e) => e.created).reduce((a, b) => a.isAfter(b) ? a : b);
     final String subtitle, name;
     if (only != null && entries.length == 1) {
-      subtitle = fmtFullDate(first);
+      subtitle = fmtFullDate(first, lang);
       name = 'letopis-${_ymd(first)}.pdf';
     } else if (first.year == last.year) {
       subtitle = '${first.year}';
@@ -140,14 +136,30 @@ Future<void> exportPdfFlow(BuildContext context, {List<Entry>? only}) async {
       subtitle = '${first.year} — ${last.year}';
       name = 'letopis-${first.year}-${last.year}.pdf';
     }
+    final note =
+        '${pluralIn(lang, 'entries', entries.length)} · ${trIn(lang, 'pdf_made', {'date': fmtDateTime(DateTime.now(), lang)})}';
+    // The font picked in the settings, plus system fonts for scripts it can't draw.
+    final face = Fonts.choice.pdf;
+    Future<Uint8List> font(String name) async => (await rootBundle.load('assets/fonts/$name')).buffer.asUint8List();
+    final fonts = PdfFonts(
+      regular: await font(face.$1),
+      bold: await font(face.$2),
+      italic: await font(face.$3),
+      emoji: await font('NotoEmoji.ttf'),
+      fallback: await systemFallbackFonts([
+        note,
+        subtitle,
+        for (final e in prepared) ...[e.month, e.date, e.title, e.body, e.mood ?? '', ...e.tags, ...e.files],
+      ].join('\n')),
+    );
     file = await writePdf(
       PdfBook(
-        title: tr('app_name'),
+        title: trIn(lang, 'app_name'),
         subtitle: subtitle,
-        note: '${plural('entries', entries.length)} · ${tr('pdf_made', {'date': fmtDateTime(DateTime.now())})}',
+        note: note,
         entries: prepared,
         fonts: fonts,
-        missing: tr('pdf_missing_photo'),
+        missing: trIn(lang, 'pdf_missing_photo'),
       ),
       Directory('${app.temp.path}/export'),
       name,
@@ -172,13 +184,43 @@ List<Entry> _pick(List<Entry> all, String period) =>
 String _ymd(DateTime t) =>
     '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
 
-String _attachmentLine(Attachment a) {
+/// UI languages whose labels the bundled PDF fonts draw (Latin and Cyrillic; Vietnamese marks fall
+/// back to the system serif).
+const _pdfLabelLanguages = {'ru', 'en', 'es', 'fr', 'pt', 'de', 'id', 'vi'};
+
+String _attachmentLine(Attachment a, String lang) {
   final kind = switch (a.type) {
-    AttachmentType.audio => tr('pdf_audio'),
-    AttachmentType.video => tr('pdf_video'),
-    _ => tr('pdf_file'),
+    AttachmentType.audio => trIn(lang, 'pdf_audio'),
+    AttachmentType.video => trIn(lang, 'pdf_video'),
+    _ => trIn(lang, 'pdf_file'),
   };
   final d = a.durationMs;
   final len = d == null ? '' : ' · ${d ~/ 60000}:${((d ~/ 1000) % 60).toString().padLeft(2, '0')}';
   return '$kind · ${a.name}$len';
+}
+
+/// TrueType fonts from Android for scripts the bundled fonts lack, only those [text] needs.
+/// The PDF library has no complex shaping: Arabic and Urdu are joined, Devanagari and Bengali come
+/// out without conjuncts. Chinese and Japanese need DroidSansFallback, which newer phones don't have.
+Future<List<Uint8List>> systemFallbackFonts(String text) async {
+  if (!Platform.isAndroid) return [];
+  final wanted = <(String, List<String>)>[
+    (r'[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]', ['NotoNaskhArabic-Regular.ttf']),
+    (r'[\u0900-\u097F]', ['NotoSansDevanagari-Regular.ttf', 'NotoSansDevanagari-VF.ttf']),
+    (r'[\u0980-\u09FF]', ['NotoSansBengali-Regular.ttf', 'NotoSansBengali-VF.ttf']),
+    (r'[\u0370-\u03FF\u1E00-\u1EFF]', ['NotoSerif-Regular.ttf']),
+    (r'[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]', ['DroidSansFallbackFull.ttf', 'DroidSansFallback.ttf']),
+  ];
+  final out = <Uint8List>[];
+  for (final (pattern, files) in wanted) {
+    if (!RegExp(pattern).hasMatch(text)) continue;
+    for (final name in files) {
+      final f = File('/system/fonts/$name');
+      if (f.existsSync()) {
+        out.add(await f.readAsBytes());
+        break;
+      }
+    }
+  }
+  return out;
 }

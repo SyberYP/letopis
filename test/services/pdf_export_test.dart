@@ -8,6 +8,7 @@ import 'package:letopis/core/entry.dart';
 import 'package:letopis/core/store.dart';
 import 'package:letopis/core/vault.dart';
 import 'package:letopis/services/pdf_export.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 const fastKdf = KdfParams(memoryKiB: 256, iterations: 1, parallelism: 1);
 
@@ -95,5 +96,44 @@ void main() {
     final noPhotos = await preparePdfEntries(store, [newer], photos: false, text: text);
     expect(noPhotos.single.images, isEmpty);
     expect(noPhotos.single.gallery, isEmpty);
+  });
+
+  test('other fonts and scripts: Lora, Arabic right to left, missing glyphs do not break the book', () async {
+    expect(textDirectionOf('Сегодня'), pw.TextDirection.ltr);
+    expect(textDirectionOf('«اليوم» كان جميلًا'), pw.TextDirection.rtl);
+    expect(textDirectionOf('12:30 — آج کا دن'), pw.TextDirection.rtl);
+    // Arabic words reach the Arabic font as whole runs, or their letters would not join.
+    expect(arabicRun.allMatches('كتبت كلمة English في الجملة، العربية. Hi').map((m) => m.group(0)),
+        ['كتبت كلمة', 'في الجملة، العربية']);
+    Uint8List f(String n) => File('assets/fonts/$n').readAsBytesSync();
+    // A Windows font with Arabic glyphs stands in for Android's Noto Naskh when it is there.
+    final arial = File('C:/Windows/Fonts/arial.ttf');
+    final book = PdfBook(
+      title: 'Letopis',
+      subtitle: '2026',
+      note: '3 entries',
+      fonts: PdfFonts(
+        regular: f('Lora-Regular.ttf'),
+        bold: f('Lora-Bold.ttf'),
+        italic: f('Lora-Italic.ttf'),
+        emoji: f('NotoEmoji.ttf'),
+        fallback: [if (arial.existsSync()) arial.readAsBytesSync()],
+      ),
+      entries: [
+        PdfEntry(month: 'October 2026', date: 'Monday, 26 October 2026', title: 'كان اليوم جميلًا',
+            body: '# عنوان\n\nفي الصباح ركضت في الحديقة، ثم تحدثت **طويلًا** مع صديق.\n\nHôm nay là một ngày tốt đẹp.'),
+        PdfEntry(month: 'October 2026', date: 'Tuesday, 27 October 2026', title: '今天',
+            body: '今天是美好的一天。आज का दिन अच्छा था। আজকের দিনটা ভালো ছিল।'),
+        PdfEntry(month: 'October 2026', date: 'Wednesday, 28 October 2026', title: 'Handwritten',
+            body: 'Caveat-free Lora text with *italic* and an emoji 🙂.'),
+      ],
+    );
+    final bytes = await buildPdf(book);
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+    if (Platform.environment['PDF_PREVIEW'] != null) {
+      File('build/pdf-preview-scripts.pdf')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(bytes);
+    }
   });
 }

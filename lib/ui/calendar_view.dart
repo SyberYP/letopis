@@ -37,7 +37,7 @@ class _CalendarViewState extends State<CalendarView> {
     final leading = (first.weekday - DateTime.monday) % 7;
     final days = DateUtils.getDaysInMonth(_month.year, _month.month);
     final today = DateUtils.dateOnly(DateTime.now());
-    final locale = Lang.code == 'ru' ? 'ru' : 'en';
+    final locale = Lang.code;
     final weekdays = [for (var i = 0; i < 7; i++) DateFormat.E(locale).format(DateTime(2024, 1, 1 + i))];
 
     return CustomScrollView(

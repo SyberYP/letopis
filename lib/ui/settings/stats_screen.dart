@@ -19,7 +19,7 @@ class StatsScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     final s = DiaryStats.of(app.entries);
     final cs = Theme.of(context).colorScheme;
-    final locale = Lang.code == 'ru' ? 'ru' : 'en';
+    final locale = Lang.code;
     final now = DateTime.now();
     final months = [for (var i = 11; i >= 0; i--) DateTime(now.year, now.month - i)];
     final tags = (app.store?.tagCounts() ?? const <MapEntry<String, int>>[]).take(10).toList();
@@ -75,7 +75,7 @@ class StatsScreen extends StatelessWidget {
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, c) => Align(
-                          alignment: Alignment.centerLeft,
+                          alignment: AlignmentDirectional.centerStart,
                           child: Container(
                             height: 10,
                             width: max(4, c.maxWidth * t.value / tags.first.value),
@@ -173,7 +173,7 @@ class _Stat extends StatelessWidget {
           children: [
             FittedBox(
               fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Text(
                 value,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: serif, color: cs.onSurface),

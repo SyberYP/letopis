@@ -200,7 +200,7 @@ class _AudioTileState extends State<AudioTile> {
     final total = _dur ?? Duration.zero;
     final progress = total.inMilliseconds == 0 ? 0.0 : (_pos.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+      padding: const EdgeInsetsDirectional.fromSTEB(6, 6, 12, 6),
       decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(18)),
       child: Row(
         children: [

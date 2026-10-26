@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.3.0+6
+version: 1.4.0+7
 
 environment:
   sdk: ^3.13.7
@@ -85,9 +85,38 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # PDF export: PT Serif (Cyrillic) and Noto Emoji, both SIL OFL 1.1 (licenses next to the files).
+  # App and PDF fonts: PT Serif, Lora, Comfortaa, Caveat, PT Mono, Noto Emoji — all SIL OFL 1.1
+  # (licenses next to the files). The PDF export reads the files from the assets.
   assets:
     - assets/fonts/
+  fonts:
+    - family: PT Serif
+      fonts:
+        - asset: assets/fonts/PT_Serif-Web-Regular.ttf
+        - asset: assets/fonts/PT_Serif-Web-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PT_Serif-Web-Italic.ttf
+          style: italic
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora-Regular.ttf
+        - asset: assets/fonts/Lora-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Lora-Italic.ttf
+          style: italic
+    - family: Comfortaa
+      fonts:
+        - asset: assets/fonts/Comfortaa-Regular.ttf
+        - asset: assets/fonts/Comfortaa-Bold.ttf
+          weight: 700
+    - family: Caveat
+      fonts:
+        - asset: assets/fonts/Caveat-Regular.ttf
+        - asset: assets/fonts/Caveat-Bold.ttf
+          weight: 700
+    - family: PT Mono
+      fonts:
+        - asset: assets/fonts/PTMono-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

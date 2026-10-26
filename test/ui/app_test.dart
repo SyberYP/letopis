@@ -103,8 +103,46 @@ void main() {
     expect(find.textContaining('Работа'), findsNothing);
   });
 
-  test('every UI string exists in both languages', () {
-    expect(strings['en']!.keys.toSet(), strings['ru']!.keys.toSet());
+  test('every UI string exists in every language, with the same placeholders', () {
+    final en = strings['en']!;
+    expect(strings.keys.toSet(), languages.keys.toSet());
+    Set<String> holders(String s) => RegExp(r'\{(\w+)\}').allMatches(s).map((m) => m[1]!).toSet();
+    final pluralExtra = RegExp(r'_(0|two|other)$');
+    final pluralKey = RegExp(r'_(0|1|two|2|5|other)$');
+    for (final MapEntry(key: lang, value: map) in strings.entries) {
+      expect(map.keys.toSet().difference(en.keys.toSet()).where((k) => !pluralExtra.hasMatch(k)), isEmpty, reason: lang);
+      expect(en.keys.toSet().difference(map.keys.toSet()), isEmpty, reason: lang);
+      for (final MapEntry(:key, :value) in map.entries) {
+        if (value.trim().isEmpty) fail('$lang.$key is empty');
+        final want = holders(en[key] ?? en['${key.replaceAll(pluralExtra, '')}_5']!);
+        // Plural forms may spell the number out ("تدوينتان"); everything else keeps every placeholder.
+        if (pluralKey.hasMatch(key)) {
+          expect(want.containsAll(holders(value)), isTrue, reason: '$lang.$key');
+        } else {
+          expect(holders(value), want, reason: '$lang.$key');
+        }
+      }
+    }
+  });
+
+  test('plural rules per language', () {
+    addTearDown(() => Lang.code = 'ru');
+    Lang.code = 'en';
+    expect(plural('entries', 1), '1 entry');
+    expect(plural('entries', 0), '0 entries');
+    Lang.code = 'fr';
+    expect(plural('entries', 0), '0 entrée');
+    expect(plural('entries', 2), '2 entrées');
+    Lang.code = 'zh';
+    expect(plural('entries', 1), '1 篇日记');
+    Lang.code = 'ar';
+    expect(plural('entries', 1), 'تدوينة واحدة');
+    expect(plural('entries', 2), 'تدوينتان');
+    expect(plural('entries', 3), '3 تدوينات');
+    expect(plural('entries', 11), '11 تدوينة');
+    expect(plural('entries', 100), '100 تدوينة');
+    expect(pluralIn('ru', 'entries', 21), '21 запись');
+    expect(trIn('de', 'settings'), 'Einstellungen');
   });
 
   test('Russian plurals', () {

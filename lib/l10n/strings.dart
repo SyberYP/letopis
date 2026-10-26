@@ -1,6 +1,42 @@
 import 'package:flutter/widgets.dart';
 
-/// UI texts. `ru` is primary; every key exists in both languages (checked by a test).
+import 'lang/zh.dart' as zh;
+import 'lang/hi.dart' as hi;
+import 'lang/es.dart' as es;
+import 'lang/ar.dart' as ar;
+import 'lang/fr.dart' as fr;
+import 'lang/bn.dart' as bn;
+import 'lang/pt.dart' as pt;
+import 'lang/id.dart' as id;
+import 'lang/ur.dart' as ur;
+import 'lang/de.dart' as de;
+import 'lang/ja.dart' as ja;
+import 'lang/mr.dart' as mr;
+import 'lang/vi.dart' as vi;
+
+/// UI languages: code → own name. Russian and English first, then the most spoken languages
+/// (Ethnologue 2026, total speakers; Nigerian Pidgin and Egyptian Arabic are skipped — they are
+/// written in English and Standard Arabic).
+const languages = <String, String>{
+  'ru': 'Русский',
+  'en': 'English',
+  'zh': '中文（简体）',
+  'hi': 'हिन्दी',
+  'es': 'Español',
+  'ar': 'العربية',
+  'fr': 'Français',
+  'bn': 'বাংলা',
+  'pt': 'Português',
+  'id': 'Bahasa Indonesia',
+  'ur': 'اردو',
+  'de': 'Deutsch',
+  'ja': '日本語',
+  'mr': 'मराठी',
+  'vi': 'Tiếng Việt',
+};
+
+/// UI texts. `ru` is primary, `en` is the fallback for the other languages; every key exists in
+/// every language (checked by a test).
 const Map<String, Map<String, String>> strings = {
   'ru': {
     'app_name': 'Летопись',
@@ -99,6 +135,15 @@ const Map<String, Map<String, String>> strings = {
     'theme_dark': 'Тёмная',
     'accent': 'Цвет',
     'language': 'Язык',
+    'font': 'Шрифт',
+    'font_classic': 'Классический',
+    'font_system': 'Без засечек',
+    'font_serif': 'Книжный — PT Serif',
+    'font_lora': 'Изящный — Lora',
+    'font_rounded': 'Округлый — Comfortaa',
+    'font_hand': 'Рукописный — Caveat',
+    'font_mono': 'Пишущая машинка — PT Mono',
+    'font_sample': 'Сегодня был хороший день',
     'security': 'Безопасность',
     'auto_lock': 'Автоблокировка',
     'auto_lock_0': 'Сразу',
@@ -363,6 +408,15 @@ const Map<String, Map<String, String>> strings = {
     'theme_dark': 'Dark',
     'accent': 'Color',
     'language': 'Language',
+    'font': 'Font',
+    'font_classic': 'Classic',
+    'font_system': 'Sans serif',
+    'font_serif': 'Book — PT Serif',
+    'font_lora': 'Elegant — Lora',
+    'font_rounded': 'Rounded — Comfortaa',
+    'font_hand': 'Handwritten — Caveat',
+    'font_mono': 'Typewriter — PT Mono',
+    'font_sample': 'Today was a good day',
     'security': 'Security',
     'auto_lock': 'Auto-lock',
     'auto_lock_0': 'Immediately',
@@ -534,6 +588,19 @@ const Map<String, Map<String, String>> strings = {
     'ai_test_sample': 'A morning run in the park, then a long talk with a friend about travelling. Read a book about space in the evening.',
     'sync_public_repo': 'The repository is public: plain entries in it would be visible to everyone. Make it private or use the encrypted mode.',
   },
+  'zh': zh.strings,
+  'hi': hi.strings,
+  'es': es.strings,
+  'ar': ar.strings,
+  'fr': fr.strings,
+  'bn': bn.strings,
+  'pt': pt.strings,
+  'id': id.strings,
+  'ur': ur.strings,
+  'de': de.strings,
+  'ja': ja.strings,
+  'mr': mr.strings,
+  'vi': vi.strings,
 };
 
 /// Current UI language, set by the app from the settings.
@@ -541,22 +608,54 @@ class Lang {
   static String code = 'ru';
 }
 
-String tr(String key, [Map<String, Object> args = const {}]) {
-  var s = strings[Lang.code]?[key] ?? strings['ru']![key] ?? key;
+String tr(String key, [Map<String, Object> args = const {}]) => trIn(Lang.code, key, args);
+
+/// [tr] in a given language (the PDF export may use English labels in an Arabic UI, say).
+String trIn(String lang, String key, [Map<String, Object> args = const {}]) {
+  var s = strings[lang]?[key] ?? strings['en']![key] ?? strings['ru']![key] ?? key;
   args.forEach((k, v) => s = s.replaceAll('{$k}', '$v'));
   return s;
 }
 
-/// Russian plural forms: 1 запись, 2 записи, 5 записей. English uses _1 and _5.
-String plural(String base, int n) {
-  final String form;
-  if (Lang.code == 'ru') {
-    final m10 = n % 10, m100 = n % 100;
-    form = m10 == 1 && m100 != 11 ? '1' : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? '2' : '5');
-  } else {
-    form = n == 1 ? '1' : '5';
+/// CLDR plural category of [n] for [lang]: zero, one, two, few, many or other.
+String pluralCategory(String lang, int n) {
+  final m10 = n % 10, m100 = n % 100;
+  switch (lang) {
+    case 'ru':
+      if (m10 == 1 && m100 != 11) return 'one';
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'few';
+      return 'many';
+    case 'ar':
+      if (n == 0) return 'zero';
+      if (n == 1) return 'one';
+      if (n == 2) return 'two';
+      if (m100 >= 3 && m100 <= 10) return 'few';
+      if (m100 >= 11 && m100 <= 99) return 'many';
+      return 'other';
+    case 'zh' || 'ja' || 'id' || 'vi':
+      return 'other';
+    case 'fr' || 'pt' || 'hi' || 'bn':
+      return n <= 1 ? 'one' : 'other';
+    default:
+      return n == 1 ? 'one' : 'other';
   }
-  return tr('${base}_$form', {'n': n});
+}
+
+/// Plural keys: `_1` one, `_2` few, `_5` many/other; Arabic also has `_0`, `_two` and `_other`.
+/// 1 запись, 2 записи, 5 записей.
+String plural(String base, int n) => pluralIn(Lang.code, base, n);
+
+String pluralIn(String lang, String base, int n) {
+  final suffix = switch (pluralCategory(lang, n)) {
+    'zero' => '0',
+    'one' => '1',
+    'two' => 'two',
+    'few' => '2',
+    'other' when lang == 'ar' => 'other',
+    _ => '5',
+  };
+  final key = strings[lang]?.containsKey('${base}_$suffix') == true ? '${base}_$suffix' : '${base}_5';
+  return trIn(lang, key, {'n': n});
 }
 
 extension TrContext on BuildContext {

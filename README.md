@@ -41,7 +41,10 @@ yours.
   private GitHub repository: encrypted, both ways, across devices.
 - Export to PDF: a book to read or print, with dates, formatting and photos; a whole year or one entry.
 - Import from a text diary export, MyDiary or `.md` files; export everything to ZIP.
-- English and Russian, light and dark themes, six accent colours.
+- 15 languages: English, Chinese, Hindi, Spanish, Arabic (right to left), French, Bengali, Portuguese, Indonesian,
+  Urdu, Russian, German, Japanese, Marathi and Vietnamese.
+- Seven fonts (classic, system, serif, Lora, rounded, handwritten, monospace), light and dark themes, six
+  accent colours.
 
 ## Screenshots
 

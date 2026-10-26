@@ -32,6 +32,7 @@ class Prefs {
     this.biometric = false,
     this.secureScreen = true,
     this.tiles = false,
+    this.font = AppFont.classic,
   });
 
   ThemeModeSetting themeMode;
@@ -44,6 +45,8 @@ class Prefs {
   /// Timeline as a grid of tiles instead of a list of cards.
   bool tiles;
 
+  AppFont font;
+
   static Future<Prefs> load() async {
     final p = await SharedPreferences.getInstance();
     return Prefs(
@@ -54,12 +57,14 @@ class Prefs {
       biometric: p.getBool('biometric') ?? false,
       secureScreen: p.getBool('secure') ?? true,
       tiles: p.getBool('tiles') ?? false,
+      font: AppFont.values.asNameMap()[p.getString('font')] ?? AppFont.classic,
     );
   }
 
   static String _systemLanguage() {
     final code = PlatformDispatcher.instance.locale.languageCode;
-    return code == 'ru' || code == 'uk' || code == 'be' ? 'ru' : 'en';
+    if (languages.containsKey(code)) return code;
+    return code == 'uk' || code == 'be' || code == 'kk' ? 'ru' : 'en';
   }
 
   Future<void> save() async {
@@ -71,10 +76,14 @@ class Prefs {
     await p.setBool('biometric', biometric);
     await p.setBool('secure', secureScreen);
     await p.setBool('tiles', tiles);
+    await p.setString('font', font.name);
   }
 }
 
 enum ThemeModeSetting { system, light, dark }
+
+/// Fonts offered in the settings; see `fontChoices` in ui/theme.dart.
+enum AppFont { classic, system, serif, lora, rounded, hand, mono }
 
 enum SyncStatus { idle, running, ok, error }
 

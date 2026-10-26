@@ -63,9 +63,9 @@ class AttachmentGallery extends StatelessWidget {
                         ),
                       ),
                     if (onDelete != null)
-                      Positioned(
+                      PositionedDirectional(
                         top: 4,
-                        right: 4,
+                        end: 4,
                         child: IconButton.filledTonal(
                           visualDensity: VisualDensity.compact,
                           onPressed: () => onDelete!(a),

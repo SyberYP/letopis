@@ -17,11 +17,15 @@ void main() {
   runApp(LetopisApp(state: app));
 }
 
-/// The PDF fonts (SIL OFL 1.1) show up in "Licenses" next to the packages.
+/// The bundled fonts (SIL OFL 1.1) show up in "Licenses" next to the packages.
 void _registerFontLicenses() {
   LicenseRegistry.addLicense(() async* {
     for (final (name, file) in const [
       ('PT Serif', 'OFL-PTSerif.txt'),
+      ('PT Mono', 'OFL-PTMono.txt'),
+      ('Lora', 'OFL-Lora.txt'),
+      ('Comfortaa', 'OFL-Comfortaa.txt'),
+      ('Caveat', 'OFL-Caveat.txt'),
       ('Noto Emoji', 'OFL-NotoEmoji.txt'),
     ]) {
       yield LicenseEntryWithLineBreaks([name], await rootBundle.loadString('assets/fonts/$file'));
@@ -43,19 +47,20 @@ class LetopisApp extends StatelessWidget {
             return const MaterialApp(debugShowCheckedModeBanner: false, home: Scaffold());
           }
           final p = app.prefs;
+          Fonts.current = p.font;
           return MaterialApp(
             title: tr('app_name'),
             debugShowCheckedModeBanner: false,
             navigatorKey: _Gate.navigatorKey,
-            theme: buildTheme(Brightness.light, p.accent),
-            darkTheme: buildTheme(Brightness.dark, p.accent),
+            theme: buildTheme(Brightness.light, p.accent, p.font),
+            darkTheme: buildTheme(Brightness.dark, p.accent, p.font),
             themeMode: switch (p.themeMode) {
               ThemeModeSetting.system => ThemeMode.system,
               ThemeModeSetting.light => ThemeMode.light,
               ThemeModeSetting.dark => ThemeMode.dark,
             },
             locale: Locale(p.language),
-            supportedLocales: const [Locale('ru'), Locale('en')],
+            supportedLocales: [for (final code in languages.keys) Locale(code)],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: const _Gate(),
           );

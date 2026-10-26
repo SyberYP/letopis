@@ -32,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild the tab labels when the language changes in settings.
+    Localizations.localeOf(context);
     final views = [
       TimelineView(tag: _tag, onClearTag: () => setState(() => _tag = null), onTag: showTag),
       CalendarView(onTag: showTag),

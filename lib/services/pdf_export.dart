@@ -13,13 +13,21 @@ import '../core/store.dart';
 /// grouped by month, Markdown formatting, photos. The PDF is NOT encrypted — like the ZIP export it
 /// is written to the temporary folder (wiped on lock) and handed to the share sheet.
 
-/// Font files (PT Serif + Noto Emoji), read from the app assets by the caller.
+/// Font files: the face picked in the settings and Noto Emoji from the app assets, plus system
+/// fonts for other scripts ([fallback]); read by the caller.
 class PdfFonts {
-  const PdfFonts({required this.regular, required this.bold, required this.italic, this.emoji});
+  const PdfFonts({
+    required this.regular,
+    required this.bold,
+    required this.italic,
+    this.emoji,
+    this.fallback = const [],
+  });
   final Uint8List regular;
   final Uint8List bold;
   final Uint8List italic;
   final Uint8List? emoji;
+  final List<Uint8List> fallback;
 }
 
 /// Everything the layout needs, already decrypted and formatted: it runs in a background
@@ -166,13 +174,20 @@ Future<Uint8List> buildPdf(PdfBook book) async {
   final emoji = f.emoji == null
       ? null
       : pw.Font.ttf(f.emoji!.buffer.asByteData(f.emoji!.offsetInBytes, f.emoji!.lengthInBytes));
+  final system = [for (final b in f.fallback) b.buffer.asByteData(b.offsetInBytes, b.lengthInBytes)];
+  final fallback = [?emoji, for (final b in system) pw.Font.ttf(b)];
+  final arabicAt = system.indexWhere((b) {
+    final glyphs = TtfParser(b).charToGlyphIndexMap;
+    return glyphs.containsKey(0x0627) && glyphs.containsKey(0xFE8E);
+  });
+  final scripts = _Scripts(arabicAt < 0 ? null : fallback[arabicAt + (emoji == null ? 0 : 1)]);
   final theme = pw.ThemeData.withFont(
     base: regular,
     bold: bold,
     italic: italic,
     boldItalic: bold,
-    fontFallback: [?emoji],
-  ).copyWith(defaultTextStyle: pw.TextStyle(font: regular, fontSize: 10.5, lineSpacing: 2.5, fontFallback: [?emoji]));
+    fontFallback: fallback,
+  ).copyWith(defaultTextStyle: pw.TextStyle(font: regular, fontSize: 10.5, lineSpacing: 2.5, fontFallback: fallback));
 
   final doc = pw.Document(title: book.title, creator: 'Letopis', producer: 'Letopis');
   const format = PdfPageFormat.a5;
@@ -216,25 +231,25 @@ Future<Uint8List> buildPdf(PdfBook book) async {
     if (e.title.isNotEmpty) {
       head.add(pw.Padding(
         padding: const pw.EdgeInsets.only(top: 3),
-        child: pw.Text(e.title, style: pw.TextStyle(font: bold, fontSize: 13.5)),
+        child: _dirText(e.title, pw.TextStyle(font: bold, fontSize: 13.5), width, scripts),
       ));
     }
     if (e.mood != null) head.add(pw.Text(e.mood!, style: const pw.TextStyle(fontSize: 9, color: _muted)));
     // The heading stays together with the date and title.
     children.add(pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: head));
     children.add(pw.SizedBox(height: 6));
-    children.addAll(_MdToPdf(e, width, bold: bold, italic: italic, missing: book.missing).blocks());
+    children.addAll(_MdToPdf(e, width, bold: bold, italic: italic, missing: book.missing, scripts: scripts).blocks());
     if (e.gallery.isNotEmpty) children.addAll(_gallery(e, width));
     for (final line in e.files) {
       children.add(pw.Padding(
         padding: const pw.EdgeInsets.only(top: 4),
-        child: pw.Text(line, style: const pw.TextStyle(fontSize: 9, color: _muted)),
+        child: _dirText(line, const pw.TextStyle(fontSize: 9, color: _muted), width, scripts),
       ));
     }
     if (e.tags.isNotEmpty) {
       children.add(pw.Padding(
         padding: const pw.EdgeInsets.only(top: 6),
-        child: pw.Text(e.tags.map((t) => '#$t').join('  '), style: const pw.TextStyle(fontSize: 9, color: _accent)),
+        child: _dirText(e.tags.map((t) => '#$t').join('  '), const pw.TextStyle(fontSize: 9, color: _accent), width, scripts),
       ));
     }
     children.add(pw.SizedBox(height: 18));
@@ -255,6 +270,75 @@ Future<Uint8List> buildPdf(PdfBook book) async {
     ),
   );
   return doc.save();
+}
+
+/// Arabic and Urdu (and Hebrew) paragraphs run right to left; the first strong letter decides.
+final _strongLetter = RegExp(
+  r'[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u0590-\u08FF\u0900-\u0DFF\u1E00-\u1EFF\u3040-\u9FFF\uAC00-\uD7AF\uFB1D-\uFDFF\uFE70-\uFEFF]',
+);
+final _rtlLetter = RegExp(r'[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]');
+
+pw.TextDirection textDirectionOf(String text) {
+  final m = _strongLetter.firstMatch(text);
+  return m != null && _rtlLetter.hasMatch(m.group(0)!) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+}
+
+pw.Widget _dirText(String text, pw.TextStyle style, double width, _Scripts scripts) {
+  final dir = textDirectionOf(text);
+  final t = pw.RichText(
+    text: pw.TextSpan(style: style, children: scripts.spans(text, style)),
+    textDirection: dir,
+    textAlign: _align(dir),
+  );
+  return dir == pw.TextDirection.rtl ? _fullWidth(t, width) : t;
+}
+
+const _arabicLetter = r'[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]';
+
+/// A run of Arabic-script words with the spaces, digits and punctuation between them. Public for tests.
+final arabicRun = RegExp('$_arabicLetter+(?:[\\s.,!?:;()«»"\'\\-–—0-9]+$_arabicLetter+)*');
+
+/// The pdf library hands every letter the main font lacks to a fallback font one at a time, and an
+/// Arabic letter shaped on its own never joins its neighbours. So each Arabic run (with the spaces and
+/// punctuation inside it) gets the Arabic font as its main font and is shaped whole.
+class _Scripts {
+  _Scripts(this.arabic);
+  final pw.Font? arabic;
+
+
+  List<pw.InlineSpan> spans(String text, pw.TextStyle style) {
+    final font = arabic;
+    if (font == null) return [pw.TextSpan(text: text, style: style)];
+    final runStyle = style.copyWith(font: font, fontNormal: font, fontBold: font, fontItalic: font, fontBoldItalic: font);
+    final out = <pw.InlineSpan>[];
+    var at = 0;
+    for (final m in arabicRun.allMatches(text)) {
+      if (m.start > at) out.add(pw.TextSpan(text: text.substring(at, m.start), style: style));
+      out.add(pw.TextSpan(text: m.group(0), style: runStyle));
+      at = m.end;
+    }
+    if (at < text.length) out.add(pw.TextSpan(text: text.substring(at), style: style));
+    return out;
+  }
+}
+
+pw.TextAlign _align(pw.TextDirection dir) => dir == pw.TextDirection.rtl ? pw.TextAlign.right : pw.TextAlign.left;
+
+/// A short right-to-left line still has to sit at the right edge, so the text gets the whole width.
+/// ConstrainedBox is a SingleChildWidget: a long paragraph inside still breaks across pages.
+pw.Widget _fullWidth(pw.Widget child, double width) =>
+    pw.ConstrainedBox(constraints: pw.BoxConstraints(minWidth: width), child: child);
+
+/// TextOverflow.span lets a long paragraph continue on the next page.
+pw.Widget _richText(List<md.Node> nodes, List<pw.InlineSpan> spans, double width) {
+  final dir = textDirectionOf(nodes.map((n) => n.textContent).join());
+  final t = pw.RichText(
+    text: pw.TextSpan(children: spans),
+    overflow: pw.TextOverflow.span,
+    textDirection: dir,
+    textAlign: _align(dir),
+  );
+  return dir == pw.TextDirection.rtl ? _fullWidth(t, width) : t;
 }
 
 List<pw.Widget> _gallery(PdfEntry e, double width) {
@@ -291,8 +375,16 @@ pw.Widget _photo(Uint8List bytes, double width) => pw.Padding(
 /// GitHub-flavoured Markdown → pdf widgets: paragraphs, headings, emphasis, lists and task
 /// lists, quotes, code, rules, tables, `att:` photos.
 class _MdToPdf {
-  _MdToPdf(this.entry, this.width, {required this.bold, required this.italic, required this.missing});
+  _MdToPdf(
+    this.entry,
+    this.width, {
+    required this.bold,
+    required this.italic,
+    required this.missing,
+    required this.scripts,
+  });
   final PdfEntry entry;
+  final _Scripts scripts;
   final double width;
   final pw.Font bold;
   final pw.Font italic;
@@ -326,7 +418,11 @@ class _MdToPdf {
           final size = switch (n.tag) { 'h1' => 15.0, 'h2' => 13.5, 'h3' => 12.0, _ => 11.0 };
           out.add(pw.Padding(
             padding: pw.EdgeInsets.only(top: 6, bottom: 2, left: indent),
-            child: pw.RichText(text: pw.TextSpan(children: _inline(n.children ?? [], style.copyWith(font: bold, fontSize: size)))),
+            child: _richText(
+              n.children ?? [],
+              _inline(n.children ?? [], style.copyWith(font: bold, fontSize: size)),
+              width - indent,
+            ),
           ));
         case 'blockquote':
           // Each paragraph gets its own bar, so a long quote can still break across pages.
@@ -399,11 +495,11 @@ class _MdToPdf {
     final out = <pw.Widget>[];
     var run = <md.Node>[];
     void flush() {
-      final spans = _inline(run, style);
+      final nodes = run;
+      final spans = _inline(nodes, style);
       run = [];
       if (spans.isEmpty) return;
-      // TextOverflow.span lets a long paragraph continue on the next page.
-      final text = pw.RichText(text: pw.TextSpan(children: spans), overflow: pw.TextOverflow.span);
+      final text = _richText(nodes, spans, width - indent);
       out.add(indent == 0 ? text : pw.Padding(padding: pw.EdgeInsets.only(left: indent), child: text));
       out.add(pw.SizedBox(height: 4));
     }
@@ -437,7 +533,7 @@ class _MdToPdf {
     final out = <pw.InlineSpan>[];
     for (final n in nodes) {
       if (n is md.Text) {
-        if (n.text.isNotEmpty) out.add(pw.TextSpan(text: n.text, style: style));
+        if (n.text.isNotEmpty) out.addAll(scripts.spans(n.text, style));
         continue;
       }
       if (n is! md.Element) continue;

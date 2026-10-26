@@ -283,7 +283,7 @@ class _CloudSettingsScreenState extends State<CloudSettingsScreen> {
             ],
             const SizedBox(height: 8),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
                 onPressed: _disconnect,
                 icon: const Icon(Icons.link_off_rounded),

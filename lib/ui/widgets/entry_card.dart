@@ -6,25 +6,27 @@ import '../../l10n/strings.dart';
 import '../theme.dart';
 import 'media.dart';
 
-String _locale() => Lang.code == 'ru' ? 'ru' : 'en';
+String _locale([String? lang]) => lang ?? Lang.code;
 
-String fmtTime(DateTime t) => DateFormat.Hm(_locale()).format(t);
+/// Date formats in the UI language, or in [lang] when given (the PDF export).
+String fmtTime(DateTime t, [String? lang]) => DateFormat.Hm(_locale(lang)).format(t);
 String fmtWeekdayShort(DateTime t) => DateFormat.E(_locale()).format(t);
 
 /// Russian formats end with "г."; it only adds noise next to a four-digit year.
 String _noYearMark(String s) => s.replaceAll(RegExp(r'\s?г\.'), '');
 
-String fmtMonthYear(DateTime t) {
-  final s = _noYearMark(DateFormat.yMMMM(_locale()).format(t));
+String fmtMonthYear(DateTime t, [String? lang]) {
+  final s = _noYearMark(DateFormat.yMMMM(_locale(lang)).format(t));
   return s[0].toUpperCase() + s.substring(1);
 }
 
-String fmtFullDate(DateTime t) {
-  final s = _noYearMark(DateFormat.yMMMMEEEEd(_locale()).format(t));
+String fmtFullDate(DateTime t, [String? lang]) {
+  final s = _noYearMark(DateFormat.yMMMMEEEEd(_locale(lang)).format(t));
   return s[0].toUpperCase() + s.substring(1);
 }
 
-String fmtDateTime(DateTime t) => '${_noYearMark(DateFormat.yMMMd(_locale()).format(t))}, ${fmtTime(t)}';
+String fmtDateTime(DateTime t, [String? lang]) =>
+    '${_noYearMark(DateFormat.yMMMd(_locale(lang)).format(t))}, ${fmtTime(t, lang)}';
 
 class TagChip extends StatelessWidget {
   const TagChip(this.tag, {super.key, this.onTap, this.onDeleted, this.small = false});
@@ -76,7 +78,7 @@ class EntryCard extends StatelessWidget {
     final tags = entry.allTags;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 16, 4),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 16, 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -120,12 +122,12 @@ class EntryCard extends StatelessWidget {
                           const Spacer(),
                           for (final a in others.take(4))
                             Padding(
-                              padding: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsetsDirectional.only(start: 6),
                               child: Icon(iconFor(a.type), size: 16, color: cs.onSurfaceVariant),
                             ),
                           if (entry.mood != null)
                             Padding(
-                              padding: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsetsDirectional.only(start: 6),
                               child: Text(moodEmoji(entry.mood!), style: const TextStyle(fontSize: 14)),
                             ),
                         ],

@@ -96,17 +96,18 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.font_download_outlined),
+            title: Text(tr('font')),
+            subtitle: Text(tr('font_${p.font.name}')),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _pickFont(context, app),
+          ),
+          ListTile(
             leading: const Icon(Icons.translate_rounded),
             title: Text(tr('language')),
-            trailing: DropdownButton<String>(
-              value: p.language,
-              underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'ru', child: Text('Русский')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
-              ],
-              onChanged: (v) => app.updatePrefs((p) => p.language = v ?? 'ru'),
-            ),
+            subtitle: Text(languages[p.language] ?? p.language),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _pickLanguage(context, app),
           ),
           _Section(tr('security')),
           ListTile(
@@ -353,6 +354,78 @@ class SettingsScreen extends StatelessWidget {
     await app.keepUnlocked(() => SharePlus.instance.share(ShareParams(files: [XFile(file.path)])));
   }
 
+}
+
+Future<void> _pickFont(BuildContext context, AppState app) async {
+  final picked = await showModalBottomSheet<AppFont>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (ctx) {
+      final text = Theme.of(ctx).textTheme;
+      final cs = Theme.of(ctx).colorScheme;
+      return SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(tr('font'), style: text.titleLarge),
+            ),
+            for (final f in AppFont.values)
+              ListTile(
+                selected: f == app.prefs.font,
+                title: Text(tr('font_${f.name}')),
+                subtitle: Text(
+                  tr('font_sample'),
+                  style: text.bodyLarge?.copyWith(
+                    fontFamily: fontChoices[f]!.heading ?? fontChoices[f]!.body ?? 'Roboto',
+                    fontSize: 17 * fontChoices[f]!.scale,
+                    color: cs.onSurface,
+                    height: 1.3,
+                  ),
+                ),
+                trailing: f == app.prefs.font ? Icon(Icons.check_rounded, color: cs.primary) : null,
+                onTap: () => Navigator.pop(ctx, f),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+  if (picked != null) await app.updatePrefs((p) => p.font = picked);
+}
+
+Future<void> _pickLanguage(BuildContext context, AppState app) async {
+  final picked = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (ctx) {
+      final cs = Theme.of(ctx).colorScheme;
+      return SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(tr('language'), style: Theme.of(ctx).textTheme.titleLarge),
+            ),
+            for (final MapEntry(key: code, value: name) in languages.entries)
+              ListTile(
+                selected: code == app.prefs.language,
+                title: Text(name),
+                trailing: code == app.prefs.language ? Icon(Icons.check_rounded, color: cs.primary) : null,
+                onTap: () => Navigator.pop(ctx, code),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+  if (picked != null) await app.updatePrefs((p) => p.language = picked);
 }
 
 class _Section extends StatelessWidget {
