@@ -56,11 +56,45 @@ Future<AppState> seeded({ThemeModeSetting theme = ThemeModeSetting.light, String
 
   Future<Attachment> voice() async {
     final f = File('${dir.path}/v.m4a')..writeAsBytesSync(List.filled(2000, 1));
-    return app.store!.importMedia(f, name: 'Голос 18:40.m4a', durationMs: 42000);
+    return app.store!.importMedia(f, name: lang == 'en' ? 'Voice 18:40.m4a' : 'Голос 18:40.m4a', durationMs: 42000);
   }
 
   DateTime d(int daysAgo, int h, int m) => DateTime(now.year, now.month, now.day - daysAgo, h, m);
-  final entries = [
+  final en = lang == 'en';
+  final entries = en
+      ? [
+          Entry.create(at: d(0, 8, 15))
+            ..title = 'Morning by the sea'
+            ..body =
+                'Woke up before the alarm and walked to the sea. Calm water, almost nobody around. '
+                'Thought about how life will change in a couple of weeks.\n\n> No need to hurry.\n\n#morning #sea'
+            ..mood = 4
+            ..attachments.addAll([await photo(1), await photo(2)]),
+          Entry.create(at: d(0, 21, 40))
+            ..title = 'Plan for the week'
+            ..body = '- [x] Pack the hospital bag\n- [ ] Call my parents\n- [ ] Finish the chapter\n\n#family #plans'
+            ..tags = ['plans'],
+          Entry.create(at: d(1, 18, 40))
+            ..body =
+                'Recorded a voice note on the way home — a game idea: event cards that change '
+                'the rules of the match. #ideas #game'
+            ..attachments.add(await voice()),
+          Entry.create(at: d(3, 23, 5))
+            ..title = 'Stars'
+            ..body = 'The sky is incredibly clear tonight. The Milky Way is visible. I want to show this to my daughter one day. #space'
+            ..attachments.add(await photo(3)),
+          Entry.create(at: d(9, 12, 0))
+            ..title = 'Read a chapter on the Roman Empire'
+            ..body = 'History does not repeat itself, but it rhymes. #books #history',
+          Entry.create(at: DateTime(now.year - 3, now.month, now.day, 19, 30))
+            ..title = 'First day in a new city'
+            ..body = 'Rented a room, walked along the embankment. Everything is ahead.'
+            ..attachments.add(await photo(4)),
+          Entry.create(at: DateTime(now.year - 7, now.month, now.day, 22, 10))
+            ..body = 'Passed the last exam. A degree with honours — done. #study',
+        ]
+      : [
+
     Entry.create(at: d(0, 8, 15))
       ..title = 'Утро у моря'
       ..body =
@@ -95,9 +129,12 @@ Future<AppState> seeded({ThemeModeSetting theme = ThemeModeSetting.light, String
   return app;
 }
 
+/// Russian shots go to docs/screenshots/ (store listing), English ones to docs/screenshots/en/.
+var shotDir = '';
+
 Future<void> shot(WidgetTester tester, String name) async {
   await settle(tester, rounds: 8);
-  await expectLater(find.byType(MaterialApp), matchesGoldenFile('../../docs/screenshots/$name.png'));
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile('../../docs/screenshots/$shotDir$name.png'));
 }
 
 void main() {
@@ -109,73 +146,77 @@ void main() {
     tester.view.devicePixelRatio = 2.625;
   }
 
-  testWidgets('screenshots', (tester) async {
-    debugDisableShadows = false;
-    phone(tester);
-    final app = (await tester.runAsync(seeded))!;
-    await tester.pumpWidget(LetopisApp(state: app));
-    await shot(tester, '1-timeline');
-    await tester.tap(find.byTooltip(tr('view_tiles')));
-    await shot(tester, '10-tiles');
-    await tester.tap(find.byTooltip(tr('view_list')));
-    await tester.pumpAndSettle();
+  for (final (lang, dir) in [('ru', ''), ('en', 'en/')]) {
+    testWidgets('screenshots $lang', (tester) async {
+      shotDir = dir;
+      debugDisableShadows = false;
+      phone(tester);
+      final app = (await tester.runAsync(() => seeded(lang: lang)))!;
+      await tester.pumpWidget(LetopisApp(state: app));
+      await shot(tester, '1-timeline');
+      await tester.tap(find.byTooltip(tr('view_tiles')));
+      await shot(tester, '10-tiles');
+      await tester.tap(find.byTooltip(tr('view_list')));
+      await tester.pumpAndSettle();
 
-    final first = app.entries.first;
-    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.push(MaterialPageRoute(builder: (_) => EntryScreen(entryId: app.entries[1].id)));
-    await shot(tester, '2-entry');
-    nav.pop();
-    await tester.pumpAndSettle();
+      final first = app.entries.first;
+      final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+      nav.push(MaterialPageRoute(builder: (_) => EntryScreen(entryId: app.entries[1].id)));
+      await shot(tester, '2-entry');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    nav.push(MaterialPageRoute(builder: (_) => EditorScreen(entry: first)));
-    await shot(tester, '3-editor');
-    nav.pop();
-    await tester.pumpAndSettle();
+      nav.push(MaterialPageRoute(builder: (_) => EditorScreen(entry: first)));
+      await shot(tester, '3-editor');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    nav.push(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(body: CalendarView(onTag: (_) {})),
-      ),
-    );
-    await shot(tester, '4-calendar');
-    nav.pop();
-    await tester.pumpAndSettle();
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(body: CalendarView(onTag: (_) {})),
+        ),
+      );
+      await shot(tester, '4-calendar');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    nav.push(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(body: TagsView(onTag: (_) {})),
-      ),
-    );
-    await shot(tester, '5-tags');
-    nav.pop();
-    await tester.pumpAndSettle();
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(body: TagsView(onTag: (_) {})),
+        ),
+      );
+      await shot(tester, '5-tags');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    nav.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-    await shot(tester, '6-settings');
-    nav.pop();
-    await tester.pumpAndSettle();
+      nav.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+      await shot(tester, '6-settings');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    nav.push(MaterialPageRoute(builder: (_) => const StatsScreen()));
-    await shot(tester, '11-stats');
-    nav.pop();
-    await tester.pumpAndSettle();
+      nav.push(MaterialPageRoute(builder: (_) => const StatsScreen()));
+      await shot(tester, '11-stats');
+      nav.pop();
+      await tester.pumpAndSettle();
 
-    await tester.runAsync(() => app.lock());
-    await shot(tester, '7-lock');
-    debugDisableShadows = true;
-    addTearDown(tester.view.reset);
-  }, skip: !enabled);
+      await tester.runAsync(() => app.lock());
+      await shot(tester, '7-lock');
+      debugDisableShadows = true;
+      addTearDown(tester.view.reset);
+    }, skip: !enabled);
 
-  testWidgets('dark screenshots', (tester) async {
-    debugDisableShadows = false;
-    phone(tester);
-    final app = (await tester.runAsync(() => seeded(theme: ThemeModeSetting.dark)))!;
-    await tester.pumpWidget(LetopisApp(state: app));
-    await shot(tester, '8-timeline-dark');
-    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.push(MaterialPageRoute(builder: (_) => EntryScreen(entryId: app.entries.first.id)));
-    await shot(tester, '9-entry-dark');
-    debugDisableShadows = true;
-    addTearDown(tester.view.reset);
-  }, skip: !enabled);
+    testWidgets('dark screenshots $lang', (tester) async {
+      shotDir = dir;
+      debugDisableShadows = false;
+      phone(tester);
+      final app = (await tester.runAsync(() => seeded(theme: ThemeModeSetting.dark, lang: lang)))!;
+      await tester.pumpWidget(LetopisApp(state: app));
+      await shot(tester, '8-timeline-dark');
+      final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+      nav.push(MaterialPageRoute(builder: (_) => EntryScreen(entryId: app.entries.first.id)));
+      await shot(tester, '9-entry-dark');
+      debugDisableShadows = true;
+      addTearDown(tester.view.reset);
+    }, skip: !enabled);
+  }
 }

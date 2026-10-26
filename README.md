@@ -1,137 +1,128 @@
-# Летопись
+<div align="center">
 
-Личный дневник для Android (iOS — позже). Каждая запись — Markdown со временем создания, тегами,
-настроением и вложениями (фото, видео, голос, файлы). Всё на устройстве зашифровано. Лента — карточками
-или плитками, есть корзина на 30 дней и статистика. Записи можно синхронизировать с
-GitHub, теги — ставить вручную или через нейросеть (OpenRouter или любой OpenAI-совместимый API).
+<img src="docs/readme/hero-en.png" alt="Letopis — a private diary, encrypted on your device" width="100%">
 
-![Лента](docs/screenshots/1-timeline.png)
+**English** · [Русский](README.ru.md)
 
-| | | |
+[![Download APK](https://img.shields.io/badge/Download-APK-5B5BD6?style=for-the-badge&logo=android&logoColor=white)](https://letopis.recalltwin.com)
+[![RuStore](https://img.shields.io/badge/RuStore-coming_soon-7a7a8c?style=for-the-badge)](#download)
+
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+![Platform: Android](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-3-02569B?logo=flutter&logoColor=white)
+![No ads, no trackers](https://img.shields.io/badge/ads_%26_trackers-none-success)
+
+</div>
+
+**Letopis** (Russian *«Летопись»*, "chronicle") is a personal diary for Android. Every entry is plain
+Markdown with its time, tags, mood and attachments, and everything is encrypted on your phone with
+a key derived from your password. No account, no cloud of ours, no ads, no analytics. Your diary stays
+yours.
+
+## Features
+
+**Write**
+- Markdown with headings, quotes and checklists; the time is set automatically.
+- Photos, video, voice notes and any files, right inside an entry.
+- Mood from 1 to 5; tags by hand, with hashtags, or suggested by AI if you want.
+
+**Look back**
+- A timeline of cards or a grid of tiles; *On this day* shows what you wrote years ago.
+- Calendar, tags, full-text search and statistics: streaks, words, average mood.
+- Trash keeps deleted entries for 30 days, with *Undo*.
+
+**Privacy first**
+- AES-256-GCM encryption, key from your password via Argon2id. Without the password the files are useless.
+- Auto-lock, optional fingerprint unlock, optional screenshot blocking.
+- The app goes online only when you ask it to: GitHub sync, AI tags, update check.
+
+**Your data, your way**
+- Optional sync through your own private GitHub repository: encrypted, both ways, across devices.
+- Import from a text diary export, MyDiary or `.md` files; export everything to ZIP.
+- English and Russian, light and dark themes, six accent colours.
+
+## Screenshots
+
+<div align="center">
+<table>
+  <tr>
+    <td><img src="docs/screenshots/en/1-timeline.png" width="200" alt="Timeline"></td>
+    <td><img src="docs/screenshots/en/10-tiles.png" width="200" alt="Tiles"></td>
+    <td><img src="docs/screenshots/en/2-entry.png" width="200" alt="Entry"></td>
+    <td><img src="docs/screenshots/en/3-editor.png" width="200" alt="Editor"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/en/4-calendar.png" width="200" alt="Calendar"></td>
+    <td><img src="docs/screenshots/en/11-stats.png" width="200" alt="Statistics"></td>
+    <td><img src="docs/screenshots/en/7-lock.png" width="200" alt="Lock screen"></td>
+    <td><img src="docs/screenshots/en/8-timeline-dark.png" width="200" alt="Dark theme"></td>
+  </tr>
+</table>
+</div>
+
+## Download
+
+| Where | Status | Android |
 |---|---|---|
-| ![](docs/screenshots/2-entry.png) | ![](docs/screenshots/3-editor.png) | ![](docs/screenshots/4-calendar.png) |
-| ![](docs/screenshots/10-tiles.png) | ![](docs/screenshots/11-stats.png) | ![](docs/screenshots/8-timeline-dark.png) |
+| **[letopis.recalltwin.com](https://letopis.recalltwin.com)** | ✅ latest APK; *Settings → Check for updates* | 9 and newer |
+| **RuStore** | 🔜 coming soon | 7 and newer |
+| **Google Play** | later | 7 and newer |
 
-ТЗ — [docs/SPEC.md](docs/SPEC.md), что сделано и что дальше — [docs/TODO.md](docs/TODO.md).
+A new version installs over the old one and keeps your entries. The site and RuStore builds are signed
+with the same key, so you can switch between them.
 
-## Установка на телефон
+> [!IMPORTANT]
+> The password cannot be recovered: that is the point of encryption. Keep it somewhere safe.
 
-1. Последняя сборка: <https://letopis.recalltwin.com> — открыть на телефоне и скачать `letopis.apk`.
-2. Собрать самому: `flutter build apk --release`, выложить: `deploy/deploy.sh` (APK, страница
-   скачивания и политика конфиденциальности). Сборка только локальная, GitHub Actions не используется.
-3. Новая версия ставится поверх старой, записи сохраняются (см. «Подпись»). Версия с сайта — Android 9+.
-   В ней есть кнопка «Настройки → Проверить обновления»: по нажатию спрашивает
-   `letopis.recalltwin.com/version.json` и предлагает открыть сайт. Само приложение в сеть не ходит;
-   в сборках для сторов кнопки нет (обновляет магазин).
+## How your data is protected
 
-### Варианты сборки (flavors)
-| Flavor | Куда | Что отличается | Команда |
-|---|---|---|---|
-| `site` | letopis.recalltwin.com | «Проверить обновления», «Поддержать» → CloudTips; компоненты RuStore SDK вырезаны из манифеста | `deploy/deploy.sh` |
-| `rustore` | RuStore | «Поддержать» → RuStore Pay | `flutter build appbundle --release --flavor rustore` |
-| `play` | Google Play (после 15.01.2027) | без обновлений и поддержки; SDK вырезан | `flutter build appbundle --release --flavor play` |
-
-Dart узнаёт вариант через `appFlavor` (`lib/services/channel.dart`).
-
-## Как это устроено
-
-| Что | Где |
+| | |
 |---|---|
-| Шифрование: Argon2id → KEK, случайный DEK, AES-256-GCM блоками по 1 МиБ (формат `LTP1`) | `lib/core/crypto.dart`, `lib/core/vault.dart` |
-| Запись: Markdown + YAML-шапка, хэштеги, превью | `lib/core/entry.dart`, `lib/core/markdown_io.dart` |
-| Хранилище: зашифрованные файлы, индекс для быстрого открытия, вложения, корзина | `lib/core/store.dart` |
-| Синхронизация с GitHub, открытое зеркало Markdown | `lib/services/git_remote.dart`, `lib/services/sync.dart` |
-| ИИ-теги | `lib/services/ai_tagger.dart` |
-| Импорт старого дневника, экспорт ZIP | `lib/services/importer.dart`, `lib/services/exporter.dart` |
-| Состояние приложения: блокировка, настройки, синхронизация | `lib/state/app_state.dart` |
-| Экраны | `lib/ui/` |
-| Тексты интерфейса (ru, en) | `lib/l10n/strings.dart` |
-| Запрет скриншотов (`FLAG_SECURE`) | `android/app/src/main/kotlin/.../MainActivity.kt` |
+| **Encryption** | Argon2id turns your password into a key that unwraps a random data key; files are AES-256-GCM in 1 MiB chunks |
+| **On the phone** | Entries, attachments, thumbnails, settings and the search index are all encrypted |
+| **Sync** | The same encrypted files go to *your* private GitHub repository; GitHub never sees the text |
+| **Network** | Only GitHub, the AI service you chose (HTTPS only, after consent) and the update check, each only on your action |
+| **Updates** | Every build is signed with a key kept outside this repository |
 
-Данные на устройстве (`<app support>/letopis/`):
+Threat model and known limitations: [SECURITY.md](SECURITY.md).
 
-```
-vault.json             соль и параметры Argon2id, завёрнутый ключ данных (без пароля бесполезен)
-settings.enc           настройки, ключи API и токен GitHub
-index.enc              кэш всех записей для быстрого открытия (не синхронизируется)
-trash.enc, trash/      корзина: удалённые записи и их вложения, 30 дней (не синхронизируется)
-entries/<uuid>.md.enc  записи
-media/<uuid>.enc       вложения
-thumbs/<uuid>.enc      миниатюры фото
-```
-
-### Синхронизация
-- **Зашифрованный режим** (по умолчанию): в папку репозитория уходят те же `.enc`-файлы и `vault.json`.
-  Сравнение трёхстороннее по SHA git-блобов (локально, удалённо, на момент прошлой синхронизации).
-  Правки в обе стороны; если запись менялась на двух устройствах — побеждает более поздняя, вторая
-  версия сохраняется отдельной записью с тегом `#конфликт`. Правка сильнее удаления.
-  Новый телефон: «Восстановить из GitHub» на первом экране + пароль.
-- **Открытый Markdown** (только отправка): `entries/ГГГГ/ММ/ГГГГ-ММ-ДД-ЧЧММ-заголовок.md` + `media/`.
-  Только для приватного репозитория.
-- Токен: fine-grained, один репозиторий, *Contents: Read and write*.
-- Ограничение GitHub API: файл не больше 95 МБ (длинные видео не уйдут в git).
-
-### Импорт
-Настройки → Импорт: текстовая выгрузка дневника («27 Сентября 2026 Воскресенье 01:44 / Заголовок
-(Категория) / текст / -----», категория становится тегом), выгрузка MyDiary («2025/05/03 текст»), файлы
-`.md`. Дубликаты пропускаются.
-
-## Разработка
-
-Безопасность — [SECURITY.md](SECURITY.md). Материалы для сторов — [docs/store/](docs/store/).
+## Build from source
 
 ```bash
 flutter pub get
-flutter analyze
-flutter test                     # ядро, синхронизация, ИИ, импорт, сценарии интерфейса
-SCREENSHOTS=1 flutter test test/ui/screenshots_test.dart --update-goldens   # docs/screenshots/
-flutter build apk --release --flavor site   # нужен Android SDK; без --flavor сборка не пойдёт
+flutter test
+flutter build apk --release --flavor site    # or --flavor rustore / --flavor play
 ```
 
-Тест `real export parses completely` разбирает настоящую выгрузку дневника, если рядом лежит
-`../источники/дневник/allentries.txt`; в отдельном репозитории он пропускается.
+Release builds need your own signing key in `android/key.properties`. The full guide (architecture,
+build flavors, signing and key rotation, sync format) is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md),
+in Russian.
 
-### Подпись
-Все release-сборки (`flutter build apk --release`, `flutter build appbundle --release`) подписываются
-**ключом загрузки** (`upload`) из `android/key.properties`; сам файл ключа лежит вне репозитория. Без
-`key.properties` release-сборка падает. Debug-сборки — стандартным debug-ключом Android.
+## Contributing
 
-| Куда | Что | Команда |
-|---|---|---|
-| RuStore | AAB или APK flavor `rustore` | `flutter build appbundle --release --flavor rustore` |
-| Google Play | AAB flavor `play` (Google переподписывает своим ключом, Play App Signing) | `flutter build appbundle --release --flavor play` |
-| Сайт | APK flavor `site` + доказательство ротации ключа, подпись v3 (Android 9+) | `deploy/deploy.sh` (сам собирает, вызывает `deploy/sign-site.sh`, пишет `version.json`) |
+Bug reports and ideas are welcome in [Issues](../../issues), pull requests too. Please keep the rules
+in [AGENTS.md](AGENTS.md): no weakening of encryption, no plaintext on disk, nothing sent over the network
+without the user's action. Found a vulnerability? Email <sybberr@gmail.com> instead of opening a public
+issue.
 
-**Ротация.** До 1.1.1 личные сборки подписывались ключом `letopis-dev.jks` с публичным паролем
-`android` (он остался в истории git). С 1.1.1 ключ выведен: `deploy/signing-lineage.bin` — подписанное
-старым ключом разрешение перейти на ключ загрузки (APK Signature Scheme v3). Телефон со старой версией
-принимает новую как обычное обновление, данные сохраняются; после этого старый ключ обновить
-приложение не может (у него нет права отката). Проверено на эмуляторе Android 14, 26.10.2026.
-Сайт и RuStore подписаны одним ключом и ставятся друг поверх друга; версия из Google Play — нет (другой ключ).
+## License
 
-Формат `key.properties`:
+[GPL-3.0](LICENSE), with an [additional permission](LICENSE-EXCEPTION.md) to link the RuStore payment SDK
+in the RuStore build. © 2026 Alexander Bylinsky.
 
-```
-storeFile=C:/Users/<имя>/.letopis/letopis-upload.jks
-storePassword=…
-keyAlias=upload
-keyPassword=…
-```
+---
 
-Ключ загрузки и пароль хранить в менеджере паролей и в резервной копии: без них не выпустить
-обновление в RuStore (в Google Play ключ загрузки можно сбросить через поддержку, ключ подписи
-приложения хранит Google). Перед переходом на версию из Google Play — синхронизировать с GitHub
-или сделать экспорт: её ключ другой, поверх не встанет.
+<div align="center">
 
-## Лицензия
-[GPL-3.0](LICENSE) с [дополнительным разрешением](LICENSE-EXCEPTION.md) на сборку с RuStore SDK.
-© 2026 Александр Былинский.
+## ❤️ Support the author
 
-## Поддержка автора
-Всё в приложении бесплатно, платных функций нет. «Настройки → Поддержать проект»:
-- версия с сайта — страница CloudTips (разовый платёж любой суммы картой);
-- версия из RuStore — разовые покупки `support_99`, `support_299`, `support_999` через RuStore Pay
-  (`lib/services/support.dart`). Покупка ничего не открывает. Нужны: ИП с подключённой монетизацией в
-  RuStore Консоли, эти три товара (тип «потребляемый»), id приложения из консоли в
-  `android/gradle.properties` → `letopisRustoreAppId`;
-- версия для Google Play — кнопки нет (правила Play; выплаты на российские счета закрыты).
+Letopis is free: no ads, no subscriptions, no paid features. Everything is available to everyone,
+and it will stay that way. If the app is useful to you, you can say thank you with a one-off payment
+of any amount.
+
+[![Support on CloudTips](https://img.shields.io/badge/Support_on-CloudTips-ff5c5c?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://pay.cloudtips.ru/p/16ad28d4)
+
+In the app: *Settings → Support the project*. A payment unlocks nothing; it is just a thank-you.<br>
+Free ways to help: ⭐ star the repository, tell a friend, report a bug.
+
+</div>

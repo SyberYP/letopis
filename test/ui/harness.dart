@@ -63,6 +63,11 @@ Future<void> loadFonts() async {
     'C:/Windows/Fonts/georgia.ttf',
     'C:/Windows/Fonts/georgiab.ttf',
   ]);
+  // Mood emoji (see emojiFallback in theme.dart): the test engine has no system fallback.
+  await family('Noto Color Emoji', [
+    '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf',
+    'C:/Windows/Fonts/seguiemj.ttf',
+  ]);
 }
 
 /// Lets real IO and isolates finish, then renders. With [until], keeps going (up to ~5 s)

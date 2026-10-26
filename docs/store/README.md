@@ -7,6 +7,7 @@
 | `icon-512.png` | Иконка 512×512, без прозрачности (магазин сам скругляет углы) |
 | `feature-1024x500.png` | Баннер Google Play |
 | `../screenshots/1-timeline.png`, `10-tiles.png`, `2-entry.png`, `3-editor.png`, `4-calendar.png`, `11-stats.png`, `7-lock.png`, `8-timeline-dark.png` | Скриншоты телефона 1080×2340 (в этом порядке) |
+| `../screenshots/en/…` | Те же скриншоты на английском (README, Google Play для других стран) |
 | `build/app/outputs/bundle/release/app-release.aab` | Сборка для загрузки: `flutter build appbundle --release` (нужен `android/key.properties`) |
 | <https://letopis.recalltwin.com/privacy/> | Политика конфиденциальности (исходник `deploy/privacy.html`) |
 

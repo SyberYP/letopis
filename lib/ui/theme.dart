@@ -15,6 +15,10 @@ const accents = <Color>[
 /// `serif`; elsewhere the platform default serif is used.
 const serif = 'serif';
 
+/// Mood emoji. Phones fall back to the system emoji font anyway; naming it lets the screenshot
+/// tests (which have no system fonts) draw real emoji instead of boxes.
+const emojiFallback = ['Noto Color Emoji'];
+
 ThemeData buildTheme(Brightness brightness, int accent) {
   final scheme = ColorScheme.fromSeed(
     seedColor: accents[accent.clamp(0, accents.length - 1)],
@@ -32,7 +36,7 @@ ThemeData buildTheme(Brightness brightness, int accent) {
       titleLarge: text.titleLarge?.copyWith(fontFamily: serif, fontWeight: FontWeight.w600),
       bodyLarge: text.bodyLarge?.copyWith(height: 1.55, fontSize: 17),
       bodyMedium: text.bodyMedium?.copyWith(height: 1.45),
-    ),
+    ).apply(fontFamilyFallback: emojiFallback),
     appBarTheme: AppBarTheme(
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,

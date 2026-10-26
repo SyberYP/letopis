@@ -13,7 +13,7 @@ APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner* 2>/dev/null | grep -E 'apksigner(
 [ -n "$APKSIGNER" ] || { echo "apksigner not found under $SDK/build-tools"; exit 1; }
 
 prop() { sed -n "s/^$1=//p" android/key.properties | tr -d '\r'; }
-[ -f android/key.properties ] || { echo "android/key.properties missing (see README, Signing)"; exit 1; }
+[ -f android/key.properties ] || { echo "android/key.properties missing (see docs/DEVELOPMENT.md, «Подпись»)"; exit 1; }
 export LETOPIS_KS_PASS LETOPIS_KEY_PASS
 LETOPIS_KS_PASS=$(prop storePassword)
 LETOPIS_KEY_PASS=$(prop keyPassword)
