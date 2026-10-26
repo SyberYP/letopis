@@ -5,10 +5,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/strings.dart';
 import '../../services/exporter.dart';
 import '../../services/importer.dart';
+import '../../services/update_check.dart';
 import '../../state/app_state.dart';
 import '../lock_screen.dart';
 import '../theme.dart';
@@ -189,6 +191,7 @@ class SettingsScreen extends StatelessWidget {
             title: Text('${tr('app_name')} ${app.version}'),
             subtitle: Text(tr('about_body')),
           ),
+          if (siteBuild) const _UpdateTile(),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
             title: Text(tr('privacy_policy')),
@@ -340,5 +343,65 @@ class _Section extends StatelessWidget {
       style: Theme.of(context).textTheme.labelMedium
           ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700, letterSpacing: 1.2),
     ),
+  );
+}
+
+/// "Check for updates" — only in the download-site build, only on tap.
+class _UpdateTile extends StatefulWidget {
+  const _UpdateTile();
+
+  @override
+  State<_UpdateTile> createState() => _UpdateTileState();
+}
+
+class _UpdateTileState extends State<_UpdateTile> {
+  bool _busy = false;
+
+  Future<void> _check() async {
+    final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    UpdateInfo? update;
+    var failed = false;
+    try {
+      update = await checkForUpdate(currentBuild: app.buildNumber);
+    } catch (_) {
+      failed = true;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (failed || update == null) {
+      messenger.showSnackBar(SnackBar(content: Text(tr(failed ? 'update_error' : 'update_none'))));
+      return;
+    }
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.system_update_rounded),
+        title: Text(tr('update_title')),
+        content: Text(tr('update_body', {'version': update!.version})),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('update_download'))),
+        ],
+      ),
+    );
+    if (go != true) return;
+    try {
+      if (!await launchUrl(Uri.parse(siteUrl), mode: LaunchMode.externalApplication)) {
+        messenger.showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+      }
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(tr('open_link_error'))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: const Icon(Icons.system_update_rounded),
+    title: Text(tr('update_check')),
+    subtitle: Text(tr('update_check_sub')),
+    trailing: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
+    onTap: _busy ? null : _check,
   );
 }

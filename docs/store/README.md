@@ -141,7 +141,7 @@ Note: the password cannot be recovered. If you forget it, nobody can open the en
 ```bash
 flutter analyze && flutter test
 # в pubspec.yaml поднять version: X.Y.Z+N (N всегда растёт)
-flutter build appbundle --release        # для сторов
-flutter build apk --release && deploy/deploy.sh   # для сайта (+ ротация с личного ключа)
+deploy/deploy.sh                          # сайт: своя сборка с кнопкой обновлений + version.json
+flutter build appbundle --release        # сторы — ПОСЛЕ deploy.sh (без LETOPIS_CHANNEL, кнопки нет)
 SCREENSHOTS=1 flutter test test/ui/screenshots_test.dart --update-goldens   # если менялся интерфейс
 ```

@@ -20,6 +20,10 @@ GitHub, теги — ставить вручную или через нейро�
 2. Собрать самому: `flutter build apk --release`, выложить: `deploy/deploy.sh` (APK, страница
    скачивания и политика конфиденциальности). Сборка только локальная, GitHub Actions не используется.
 3. Новая версия ставится поверх старой, записи сохраняются (см. «Подпись»). Версия с сайта — Android 9+.
+   В ней есть кнопка «Настройки → Проверить обновления»: по нажатию спрашивает
+   `letopis.recalltwin.com/version.json` и предлагает открыть сайт. Само приложение в сеть не ходит;
+   в сборках для сторов кнопки нет (обновляет магазин). Сборка для сайта —
+   `flutter build apk --release --dart-define=LETOPIS_CHANNEL=site`, её делает `deploy/deploy.sh`.
 
 ## Как это устроено
 
@@ -88,7 +92,7 @@ flutter build apk --release      # нужен Android SDK
 |---|---|---|
 | RuStore | APK или AAB как есть | `flutter build apk --release` / `flutter build appbundle --release` |
 | Google Play | AAB (Google переподписывает своим ключом, Play App Signing) | `flutter build appbundle --release` |
-| Сайт | тот же APK + доказательство ротации ключа, только подпись v3 (Android 9+) | `deploy/deploy.sh` (вызывает `deploy/sign-site.sh`) |
+| Сайт | APK с `LETOPIS_CHANNEL=site` (кнопка обновлений) + доказательство ротации ключа, подпись v3 (Android 9+) | `deploy/deploy.sh` (сам собирает, вызывает `deploy/sign-site.sh`, пишет `version.json`) |
 
 **Ротация.** До 1.1.1 личные сборки подписывались ключом `letopis-dev.jks` с публичным паролем
 `android` (он остался в истории git). С 1.1.1 ключ выведен: `deploy/signing-lineage.bin` — подписанное

@@ -126,6 +126,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// App version for the About section, e.g. `1.1.0 (3)`.
   String version = '';
+
+  /// Build number (`versionCode`), compared with the download site by the update check.
+  int buildNumber = 0;
   late Directory root;
   late Directory temp;
   bool ready = false;
@@ -150,6 +153,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final info = await PackageInfo.fromPlatform();
       version = '${info.version} (${info.buildNumber})';
+      buildNumber = int.tryParse(info.buildNumber) ?? 0;
     } catch (_) {
       // tests and unsupported platforms
     }
