@@ -6,10 +6,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Store key from key.properties (written by CI from secrets); otherwise the personal-build key.
+// Two keys:
+// - personal builds (`flutter build apk`) use the dev key in the repo, so updates install over each other;
+// - store builds (`flutter build appbundle`, or any build with LETOPIS_STORE=1) use the upload key from
+//   android/key.properties, which lives outside git. A store build without it fails instead of falling back.
 val keyProps = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
+}
+val storeBuild = System.getenv("LETOPIS_STORE") == "1" ||
+    gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
+if (storeBuild && keyProps.isEmpty) {
+    throw GradleException("Store build needs android/key.properties with the upload key (see README, Signing)")
 }
 
 android {
@@ -37,27 +45,28 @@ android {
     }
 
     signingConfigs {
-        create("letopis") {
-            if (keyProps.isNotEmpty()) {
+        create("dev") {
+            storeFile = file("letopis-dev.jks")
+            storePassword = "android"
+            keyAlias = "letopis"
+            keyPassword = "android"
+        }
+        if (storeBuild) {
+            create("store") {
                 storeFile = file(keyProps.getProperty("storeFile"))
                 storePassword = keyProps.getProperty("storePassword")
                 keyAlias = keyProps.getProperty("keyAlias")
                 keyPassword = keyProps.getProperty("keyPassword")
-            } else {
-                storeFile = file("letopis-dev.jks")
-                storePassword = "android"
-                keyAlias = "letopis"
-                keyPassword = "android"
             }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("letopis")
+            signingConfig = signingConfigs.getByName("dev")
         }
         release {
-            signingConfig = signingConfigs.getByName("letopis")
+            signingConfig = signingConfigs.getByName(if (storeBuild) "store" else "dev")
         }
     }
 }

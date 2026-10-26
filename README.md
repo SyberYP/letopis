@@ -1,7 +1,8 @@
 # Летопись
 
-Личный дневник для Android (iOS — позже). Каждая запись — Markdown со временем создания, тегами и
-вложениями (фото, видео, голос, файлы). Всё на устройстве зашифровано. Записи можно синхронизировать с
+Личный дневник для Android (iOS — позже). Каждая запись — Markdown со временем создания, тегами,
+настроением и вложениями (фото, видео, голос, файлы). Всё на устройстве зашифровано. Лента — карточками
+или плитками, есть корзина на 30 дней и статистика. Записи можно синхронизировать с
 GitHub, теги — ставить вручную или через нейросеть (OpenRouter или любой OpenAI-совместимый API).
 
 ![Лента](docs/screenshots/1-timeline.png)
@@ -9,16 +10,15 @@ GitHub, теги — ставить вручную или через нейро�
 | | | |
 |---|---|---|
 | ![](docs/screenshots/2-entry.png) | ![](docs/screenshots/3-editor.png) | ![](docs/screenshots/4-calendar.png) |
-| ![](docs/screenshots/7-lock.png) | ![](docs/screenshots/6-settings.png) | ![](docs/screenshots/8-timeline-dark.png) |
+| ![](docs/screenshots/10-tiles.png) | ![](docs/screenshots/11-stats.png) | ![](docs/screenshots/8-timeline-dark.png) |
 
 ТЗ — [docs/SPEC.md](docs/SPEC.md), что сделано и что дальше — [docs/TODO.md](docs/TODO.md).
 
 ## Установка на телефон
 
 1. Последняя сборка: <https://letopis.recalltwin.com> — открыть на телефоне и скачать `letopis.apk`.
-   Локальная сборка: `flutter build apk --release`.
-2. Или скачать `letopis.apk` из релиза **«Летопись — последняя сборка»** (тег `letopis-latest`) или из
-   артефакта сборки GitHub Actions (`.github/workflows/build.yml`), открыть на телефоне, разрешить установку из этого источника.
+2. Собрать самому: `flutter build apk --release`, выложить: `deploy/deploy.sh` (APK, страница
+   скачивания и политика конфиденциальности). Сборка только локальная, GitHub Actions не используется.
 3. Новая версия ставится поверх старой, записи сохраняются: все сборки подписаны одним ключом
    (`android/app/letopis-dev.jks`, см. «Подпись»).
 
@@ -28,7 +28,7 @@ GitHub, теги — ставить вручную или через нейро�
 |---|---|
 | Шифрование: Argon2id → KEK, случайный DEK, AES-256-GCM блоками по 1 МиБ (формат `LTP1`) | `lib/core/crypto.dart`, `lib/core/vault.dart` |
 | Запись: Markdown + YAML-шапка, хэштеги, превью | `lib/core/entry.dart`, `lib/core/markdown_io.dart` |
-| Хранилище: зашифрованные файлы, индекс для быстрого открытия, вложения | `lib/core/store.dart` |
+| Хранилище: зашифрованные файлы, индекс для быстрого открытия, вложения, корзина | `lib/core/store.dart` |
 | Синхронизация с GitHub, открытое зеркало Markdown | `lib/services/git_remote.dart`, `lib/services/sync.dart` |
 | ИИ-теги | `lib/services/ai_tagger.dart` |
 | Импорт старого дневника, экспорт ZIP | `lib/services/importer.dart`, `lib/services/exporter.dart` |
@@ -43,6 +43,7 @@ GitHub, теги — ставить вручную или через нейро�
 vault.json             соль и параметры Argon2id, завёрнутый ключ данных (без пароля бесполезен)
 settings.enc           настройки, ключи API и токен GitHub
 index.enc              кэш всех записей для быстрого открытия (не синхронизируется)
+trash.enc, trash/      корзина: удалённые записи и их вложения, 30 дней (не синхронизируется)
 entries/<uuid>.md.enc  записи
 media/<uuid>.enc       вложения
 thumbs/<uuid>.enc      миниатюры фото
@@ -66,6 +67,8 @@ thumbs/<uuid>.enc      миниатюры фото
 
 ## Разработка
 
+Безопасность — [SECURITY.md](SECURITY.md). Материалы для сторов — [docs/store/](docs/store/).
+
 ```bash
 flutter pub get
 flutter analyze
@@ -78,8 +81,23 @@ flutter build apk --release      # нужен Android SDK
 `../источники/дневник/allentries.txt`; в отдельном репозитории он пропускается.
 
 ### Подпись
-Личные сборки подписаны `android/app/letopis-dev.jks` (пароль `android`, ключ `letopis`): так обновления
-ставятся поверх. Это не секрет и не ключ магазина. Для RuStore / Google Play создать отдельный ключ и
-положить его в секреты репозитория: `LETOPIS_KEYSTORE_BASE64`, `LETOPIS_KEYSTORE_PASSWORD`,
-`LETOPIS_KEY_ALIAS`, `LETOPIS_KEY_PASSWORD` — workflow возьмёт его сам. Смена ключа требует
-переустановки приложения: сначала синхронизировать с GitHub.
+Два ключа, выбираются в `android/app/build.gradle.kts` автоматически:
+
+| Сборка | Ключ | Где |
+|---|---|---|
+| `flutter build apk --release` — личная, для сайта | `android/app/letopis-dev.jks` (пароль `android`, ключ `letopis`) | в репозитории, не секрет |
+| `flutter build appbundle --release` или любая с `LETOPIS_STORE=1` — для сторов | ключ загрузки (`upload`) | `android/key.properties` → файл `.jks` вне репозитория |
+
+Без `key.properties` сборка для стора падает, а не подписывается личным ключом. Формат файла:
+
+```
+storeFile=C:/Users/<имя>/.letopis/letopis-upload.jks
+storePassword=…
+keyAlias=upload
+keyPassword=…
+```
+
+Ключ загрузки и пароль хранить в менеджере паролей и в резервной копии: без них не выпустить
+обновление в RuStore (в Google Play ключ загрузки можно сбросить через поддержку, ключ подписи
+приложения хранит Google). Приложения с разными ключами не ставятся друг поверх друга: перед
+переходом с версии с сайта на версию из стора — синхронизировать с GitHub или сделать экспорт.

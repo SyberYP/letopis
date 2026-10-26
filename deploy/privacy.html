@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Летопись — политика конфиденциальности</title>
+<style>
+  :root { --bg: #f7f3ec; --fg: #2b2620; --muted: #7a6f62; --accent: #8a5a2b; --card: #fffdf9; --line: #e6dccd; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1915; --fg: #eee6da; --muted: #a39887; --accent: #d9a46a; --card: #25211c; --line: #3a332b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; font-size: 34px; margin: 0 0 4px; line-height: 1.2; }
+  h2 { font-size: 19px; margin: 28px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  a { color: var(--accent); }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 48px 0; }
+  nav { margin: 0 0 24px; }
+</style>
+</head>
+<body>
+<main>
+<nav><a href="#ru">Русский</a> · <a href="#en">English</a></nav>
+
+<section id="ru" lang="ru">
+<h1>Политика конфиденциальности «Летописи»</h1>
+<p class="sub">Действует с 26 октября 2026 года.</p>
+
+<p>«Летопись» — личный дневник. Коротко: <b>ваши записи хранятся только на вашем устройстве и только в
+зашифрованном виде. Разработчик их не получает и прочитать не может.</b> Данные уходят в сеть только туда,
+куда вы сами их отправили: в свой репозиторий GitHub или нейросети, которую вы подключили.</p>
+
+<h2>Что приложение не делает</h2>
+<ul>
+  <li>Не требует регистрации и не создаёт учётных записей.</li>
+  <li>Не содержит рекламы, аналитики, трекеров и сборщиков отчётов о сбоях.</li>
+  <li>Не передаёт данные разработчику или третьим лицам.</li>
+  <li>Не определяет местоположение и не читает контакты.</li>
+</ul>
+
+<h2>Что хранится на устройстве</h2>
+<p>Записи, теги, вложения (фото, видео, голос, файлы), настройки, токен GitHub и ключ API нейросети.
+Всё зашифровано AES-256-GCM ключом, который выводится из вашего пароля (Argon2id). Пароль никуда не
+отправляется. Если вы его забудете, восстановить данные нельзя — ни вам, ни разработчику.
+Если включена разблокировка по отпечатку, ключ хранится в защищённом хранилище Android.</p>
+
+<h2>Когда данные уходят в сеть</h2>
+<ul>
+  <li><b>Синхронизация с GitHub</b> (выключена, пока вы её не настроите). Записи отправляются в ваш
+    репозиторий с вашим токеном. В обычном режиме — в зашифрованном виде. В режиме «открытый Markdown»
+    — открытым текстом, и только в приватный репозиторий. Обработку данных на стороне GitHub описывает
+    <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">политика GitHub</a>.</li>
+  <li><b>Подбор тегов нейросетью</b> (выключен, пока вы не укажете сервис и ключ). По кнопке «Подобрать»
+    текст одной записи (без вложений) отправляется выбранному вами сервису (например, OpenRouter) после
+    вашего согласия. Данные обрабатываются по правилам этого сервиса.</li>
+  <li><b>Ссылки в записях</b> открываются в браузере только после подтверждения.</li>
+</ul>
+
+<h2>Разрешения</h2>
+<ul>
+  <li><b>Микрофон</b> — запись голосовых заметок, только когда вы нажали «Голос».</li>
+  <li><b>Биометрия</b> — разблокировка дневника отпечатком или лицом, по желанию.</li>
+  <li><b>Интернет</b> — только для синхронизации и нейросети, описанных выше.</li>
+  <li>Фото и видео с камеры снимает системное приложение камеры; доступа к камере у «Летописи» нет.</li>
+</ul>
+
+<h2>Удаление данных</h2>
+<p>Удалённая запись 30 дней лежит в корзине (тоже зашифрованной), затем стирается. Удаление приложения
+стирает все данные на устройстве. Копии в вашем репозитории GitHub удаляете вы сами.</p>
+
+<h2>Дети</h2>
+<p>Приложение не предназначено специально для детей и не собирает данные о возрасте.</p>
+
+<h2>Изменения и вопросы</h2>
+<p>При изменении политики новая версия публикуется на этой странице с новой датой. Вопросы — по адресу
+электронной почты разработчика, указанному в карточке приложения в магазине.</p>
+</section>
+
+<hr>
+
+<section id="en" lang="en">
+<h1>Letopis privacy policy</h1>
+<p class="sub">Effective October 26, 2026.</p>
+
+<p>Letopis is a personal diary. In short: <b>your entries are stored only on your device and only in
+encrypted form. The developer never receives them and cannot read them.</b> Data goes to the network only
+where you send it: your own GitHub repository or an AI service you connected.</p>
+
+<h2>What the app does not do</h2>
+<ul>
+  <li>No sign-up, no accounts.</li>
+  <li>No ads, analytics, trackers or crash reporting.</li>
+  <li>No data is sent to the developer or third parties.</li>
+  <li>No location, no contacts.</li>
+</ul>
+
+<h2>What is stored on the device</h2>
+<p>Entries, tags, attachments (photos, video, voice, files), settings, your GitHub token and AI API key.
+Everything is encrypted with AES-256-GCM under a key derived from your password (Argon2id). The password
+is never sent anywhere. If you forget it, the data cannot be recovered by you or by the developer.
+With fingerprint unlock enabled, the key is kept in Android's secure storage.</p>
+
+<h2>When data leaves the device</h2>
+<ul>
+  <li><b>GitHub sync</b> (off until you set it up). Entries are sent to your repository with your token.
+    By default they stay encrypted. In "plain Markdown" mode they are sent as plain text, and only to a
+    private repository. GitHub's handling is covered by the
+    <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy statement</a>.</li>
+  <li><b>AI tag suggestions</b> (off until you enter a service and key). When you tap "Suggest", the text
+    of one entry (no attachments) is sent to the service you chose (e.g. OpenRouter), after your consent,
+    and is handled under that service's terms.</li>
+  <li><b>Links in entries</b> open in the browser only after you confirm.</li>
+</ul>
+
+<h2>Permissions</h2>
+<ul>
+  <li><b>Microphone</b> — voice notes, only when you tap "Voice".</li>
+  <li><b>Biometrics</b> — optional fingerprint or face unlock.</li>
+  <li><b>Internet</b> — only for the sync and AI features above.</li>
+  <li>Camera photos and videos are taken by the system camera app; Letopis has no camera access.</li>
+</ul>
+
+<h2>Deleting data</h2>
+<p>A deleted entry stays in the (encrypted) trash for 30 days, then it is erased. Uninstalling the app
+erases all data on the device. Copies in your GitHub repository are yours to delete.</p>
+
+<h2>Children</h2>
+<p>The app is not directed at children and collects no age data.</p>
+
+<h2>Changes and questions</h2>
+<p>A changed policy is published on this page with a new date. Questions: the developer email shown on
+the app's store listing.</p>
+</section>
+</main>
+</body>
+</html>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upload a built APK and the download page to the VPS.
+# Upload a built APK, the download page and the privacy policy (/privacy/) to the VPS.
 # Usage: deploy/deploy.sh [path/to/app-release.apk]
 # Env: LETOPIS_HOST (default root@85.137.88.33), LETOPIS_DIR (default /var/www/letopis).
 set -euo pipefail
@@ -23,9 +23,10 @@ sed -e "s/{{VERSION}}/$VERSION/" -e "s/{{SIZE}}/$SIZE/" -e "s/{{SHA256}}/$SHA/" 
 cp "$APK" "$TMP/letopis.apk"
 
 # Upload under temporary names, then rename: a download in progress never sees a half-written file.
-ssh "$HOST" "mkdir -p '$DIR'"
+ssh "$HOST" "mkdir -p '$DIR/privacy'"
 scp -q "$TMP/letopis.apk" "$HOST:$DIR/letopis.apk.new"
 scp -q "$TMP/index.html" "$HOST:$DIR/index.html.new"
-ssh "$HOST" "cd '$DIR' && mv letopis.apk.new letopis.apk && mv index.html.new index.html"
+scp -q deploy/privacy.html "$HOST:$DIR/privacy/index.html.new"
+ssh "$HOST" "cd '$DIR' && mv letopis.apk.new letopis.apk && mv index.html.new index.html && mv privacy/index.html.new privacy/index.html"
 
 echo "Uploaded $VERSION ($SIZE MB, sha256 $SHA) to $HOST:$DIR"
