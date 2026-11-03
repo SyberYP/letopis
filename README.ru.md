@@ -5,7 +5,7 @@
 [English](README.md) · **Русский**
 
 [![Скачать APK](https://img.shields.io/badge/Скачать-APK-5B5BD6?style=for-the-badge&logo=android&logoColor=white)](https://letopis.recalltwin.com)
-[![RuStore](https://img.shields.io/badge/RuStore-скоро-7a7a8c?style=for-the-badge)](#скачать)
+[![RuStore](https://img.shields.io/badge/RuStore-на модерации-7a7a8c?style=for-the-badge)](#скачать)
 
 [![Лицензия: GPL-3.0](https://img.shields.io/badge/лицензия-GPL--3.0-blue)](LICENSE)
 ![Платформа: Android](https://img.shields.io/badge/платформа-Android-3DDC84?logo=android&logoColor=white)
@@ -69,7 +69,7 @@
 | Где | Статус | Android |
 |---|---|---|
 | **[letopis.recalltwin.com](https://letopis.recalltwin.com)** | ✅ последний APK; «Настройки → Проверить обновления» | 9 и новее |
-| **RuStore** | 🔜 скоро | 7 и новее |
+| **RuStore** | 🔜 на модерации | 7 и новее |
 | **Google Play** | позже | 7 и новее |
 
 Новая версия ставится поверх старой, записи сохраняются. Версии с сайта и из RuStore подписаны одним

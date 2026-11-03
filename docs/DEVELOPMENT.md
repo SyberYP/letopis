@@ -17,7 +17,7 @@
 | Flavor | Куда | Что отличается | Команда |
 |---|---|---|---|
 | `site` | letopis.recalltwin.com | «Проверить обновления», «Поддержать» → CloudTips; компоненты RuStore SDK вырезаны из манифеста | `deploy/deploy.sh` |
-| `rustore` | RuStore | «Поддержать» → RuStore Pay | `flutter build appbundle --release --flavor rustore` |
+| `rustore` | RuStore | «Поддержать» → RuStore Pay | `flutter build apk --release --flavor rustore` |
 | `play` | Google Play (после 15.01.2027) | без обновлений и поддержки; SDK вырезан | `flutter build appbundle --release --flavor play` |
 
 Dart узнаёт вариант через `appFlavor` (`lib/services/channel.dart`).
@@ -142,7 +142,7 @@ flutter build apk --release --flavor site   # нужен Android SDK; без --f
 
 | Куда | Что | Команда |
 |---|---|---|
-| RuStore | AAB или APK flavor `rustore` | `flutter build appbundle --release --flavor rustore` |
+| RuStore | APK flavor `rustore`; для AAB консоль требует загрузить закрытый ключ, поэтому используем APK | `flutter build apk --release --flavor rustore` |
 | Google Play | AAB flavor `play` (Google переподписывает своим ключом, Play App Signing) | `flutter build appbundle --release --flavor play` |
 | Сайт | APK flavor `site` + доказательство ротации ключа, подпись v3 (Android 9+) | `deploy/deploy.sh` (сам собирает, вызывает `deploy/sign-site.sh`, пишет `version.json`) |
 

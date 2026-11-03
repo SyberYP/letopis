@@ -155,7 +155,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static RemoteRepo remoteFor(SyncConfig c) => c is WebDavConfig ? WebDavRepo(c) : GitHubRepo(c as GitHubConfig);
 
   bool get hasVault => vault != null;
-  bool get unlocked => store != null;
+  bool get unlocked => store != null && _lockInProgress == null;
 
   int _revision = 0;
 
@@ -194,6 +194,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   DateTime? _pausedAt;
   Timer? _lockTimer;
+  Future<void>? _lockInProgress;
   int _suspend = 0;
 
   /// Keeps the diary open while a system picker or camera is in front (the app is "paused").
@@ -209,6 +210,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _lockTimer?.cancel();
+      final at = _pausedAt;
+      _pausedAt = null;
+      if (unlocked && at != null && DateTime.now().difference(at).inSeconds >= prefs.autoLockSeconds) lock();
+      return;
+    }
     if (!unlocked) return;
     if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       if (_suspend > 0) return;
@@ -219,11 +227,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       } else {
         _lockTimer = Timer(Duration(seconds: prefs.autoLockSeconds), lock);
       }
-    } else if (state == AppLifecycleState.resumed) {
-      _lockTimer?.cancel();
-      final at = _pausedAt;
-      _pausedAt = null;
-      if (at != null && DateTime.now().difference(at).inSeconds >= prefs.autoLockSeconds) lock();
     }
   }
 
@@ -238,6 +241,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Returns false on a wrong password.
   Future<bool> unlock(String password) async {
+    await _lockInProgress;
     try {
       final box = await vault!.unlock(password);
       await _open(box);
@@ -251,6 +255,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<bool> unlockWithBiometrics() async {
     if (!prefs.biometric || vault == null) return false;
+    await _lockInProgress;
     if (!await platform.authenticate(tr('biometric_reason'))) return false;
     final stored = await platform.readSecret(_bioKey);
     if (stored == null) return false;
@@ -303,33 +308,45 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   /// Called before the key is wiped: open editors save their text here.
   final List<Future<void> Function()> beforeLock = [];
 
-  Future<void> lock() async {
+  Future<void> lock() {
     _lockTimer?.cancel();
     _syncTimer?.cancel();
-    if (store == null) return;
-    for (final f in List.of(beforeLock)) {
-      try {
-        await f();
-      } catch (_) {
-        // locking must not fail
-      }
-    }
+    final pending = _lockInProgress;
+    if (pending != null) return pending;
     final s = store;
-    if (s == null) return;
-    // A stuck disk must not keep the diary open: wait a little, then lock anyway.
-    await Future.wait(List.of(_writes)).timeout(const Duration(seconds: 5), onTimeout: () => const []);
-    try {
-      await s.flushIndex();
-    } catch (_) {
-      // the index is only a cache
-    }
-    store = null;
-    s.clearTemp();
-    s.box.wipe();
-    ai = const AiConfig();
-    git = const GitHubConfig();
-    dav = const WebDavConfig();
+    if (s == null) return Future.value();
+    final future = _finishLock(s);
+    _lockInProgress = future;
     notifyListeners();
+    return future;
+  }
+
+  Future<void> _finishLock(EntryStore s) async {
+    try {
+      for (final f in List.of(beforeLock)) {
+        try {
+          await f();
+        } catch (_) {
+          // locking must not fail
+        }
+      }
+      // A stuck disk must not keep the diary open: wait a little, then lock anyway.
+      await Future.wait(List.of(_writes)).timeout(const Duration(seconds: 5), onTimeout: () => const []);
+      try {
+        await s.flushIndex();
+      } catch (_) {
+        // the index is only a cache
+      }
+    } finally {
+      if (identical(store, s)) store = null;
+      _lockInProgress = null;
+      s.clearTemp();
+      s.box.wipe();
+      ai = const AiConfig();
+      git = const GitHubConfig();
+      dav = const WebDavConfig();
+      notifyListeners();
+    }
   }
 
   /// Replaces the local diary with one restored from GitHub.

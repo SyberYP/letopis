@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:letopis/core/entry.dart';
@@ -10,6 +12,31 @@ import 'package:letopis/ui/lock_screen.dart';
 import 'harness.dart';
 
 void main() {
+  testWidgets('returning during immediate auto-lock never exposes the diary again', (tester) async {
+    final app = (await tester.runAsync(makeApp))!;
+    await tester.runAsync(() => app.createVault('pw-pw-pw'));
+    app.prefs.autoLockSeconds = 0;
+    await tester.pumpWidget(LetopisApp(state: app));
+    await settle(tester);
+
+    final saving = Completer<void>();
+    app.beforeLock.add(() => saving.future);
+    app.didChangeAppLifecycleState(AppLifecycleState.paused);
+    app.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(app.unlocked, isFalse);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(LockScreen), findsOneWidget);
+
+    await tester.runAsync(() async {
+      saving.complete();
+      await Future<void>.delayed(Duration.zero);
+    });
+    await settle(tester);
+  });
+
   testWidgets('setup → write an entry → it is in the timeline → lock → unlock', (tester) async {
     final app = (await tester.runAsync(makeApp))!;
     await tester.pumpWidget(LetopisApp(state: app));

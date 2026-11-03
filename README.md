@@ -5,7 +5,7 @@
 **English** · [Русский](README.ru.md)
 
 [![Download APK](https://img.shields.io/badge/Download-APK-5B5BD6?style=for-the-badge&logo=android&logoColor=white)](https://letopis.recalltwin.com)
-[![RuStore](https://img.shields.io/badge/RuStore-coming_soon-7a7a8c?style=for-the-badge)](#download)
+[![RuStore](https://img.shields.io/badge/RuStore-on_moderation-7a7a8c?style=for-the-badge)](#download)
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 ![Platform: Android](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
@@ -70,7 +70,7 @@ yours.
 | Where | Status | Android |
 |---|---|---|
 | **[letopis.recalltwin.com](https://letopis.recalltwin.com)** | ✅ latest APK; *Settings → Check for updates* | 9 and newer |
-| **RuStore** | 🔜 coming soon | 7 and newer |
+| **RuStore** | 🔜 on moderation | 7 and newer |
 | **Google Play** | later | 7 and newer |
 
 A new version installs over the old one and keeps your entries. The site and RuStore builds are signed
