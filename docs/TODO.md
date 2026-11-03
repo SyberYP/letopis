@@ -70,7 +70,7 @@
 - [x] Страница репозитория для открытия: README на английском и русском, баннер, скриншоты en/ru, SECURITY en/ru, поддержка автора внизу
 - [x] Описание, сайт и темы репозитория на GitHub
 - [x] Репозиторий публичный, Issues и Private vulnerability reporting включены, secret scanning и push protection включены (03.11.2026)
-- [ ] Превью для соцсетей (`docs/readme/hero-en.png`, Settings → Social preview)
+- [x] Превью для соцсетей (`docs/readme/hero-en.png`, Settings → Social preview)
 - [x] Синхронизация с облаком по WebDAV (Яндекс Диск, Облако Mail.ru, Nextcloud, любой WebDAV), восстановление из облака (1.3.0)
 - [x] Экспорт в PDF: весь дневник, год или одна запись (1.3.0)
 - [x] Выбор шрифта: 7 вариантов, в интерфейсе и в PDF (1.4.0)
