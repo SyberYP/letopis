@@ -173,5 +173,6 @@ keyPassword=…
 - версия из RuStore — разовые покупки `support_99`, `support_299`, `support_999` через RuStore Pay
   (`lib/services/support.dart`). Покупка ничего не открывает. Нужны: ИП с подключённой монетизацией в
   RuStore Консоли, эти три товара (тип «потребляемый»), id приложения из консоли в
-  `android/gradle.properties` → `letopisRustoreAppId`;
+  `android/gradle.properties` → `letopisRustoreAppId`. Заявление с УКЭП принято 04.11.2026, три товара
+  опубликованы (99, 299 и 999 ₽). Тестовую покупку ещё нужно провести на Android-устройстве с RuStore;
 - версия для Google Play — кнопки нет (правила Play; выплаты на российские счета закрыты).
